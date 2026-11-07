@@ -28,6 +28,7 @@ AI agents and LLM-based tools read web pages too. A full HTML page is mostly men
 - your `llms.txt` (only when that file exists);
 - your agent skills index, `.well-known/agent-skills/index.json` (only when that file exists);
 - your Agentic Resource Discovery (ARD) manifest, `.well-known/ai-catalog.json` (only when that file exists); this one also goes into the HTML head as `<link rel="ai-catalog">`;
+- your MCP Server Card, `.well-known/mcp/server-card.json` (only when that file exists);
 - your XML sitemap (when you enter its URL);
 - the Markdown version of the page.
 
@@ -119,6 +120,7 @@ The selectors support `tag`, `#id`, `.class`, `[attr]`, `[attr=value]`, combinat
 | llms.txt | On | Link to `/llms.txt`, only when that file exists in the site root. |
 | Agent skills index | On | Link to `/.well-known/agent-skills/index.json`, only when that file exists. |
 | AI catalog (ARD) | On | Link to `/.well-known/ai-catalog.json` (`rel="ai-catalog"`), in the `Link` header and as `<link>` in the HTML head, only when that file exists. |
+| MCP Server Card | On | Link to `/.well-known/mcp/server-card.json` (`rel="describedby"`), only when that file exists. |
 | Sitemap URL | Empty | The URL of your XML sitemap, for example `/sitemap.xml`. Empty sends no sitemap link. |
 | Markdown version | On | Link to the Markdown version of the page itself. |
 
