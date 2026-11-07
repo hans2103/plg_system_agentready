@@ -145,7 +145,7 @@ jobs:
               exit 1
             fi
           done
-          if grep -qE '(^|/)(composer\.json|CLAUDE\.md)$' plugin.list | grep -v '^vendor/'; then
+          if grep -qE '(^|/)CLAUDE\.md$|^vendor/bin/' plugin.list; then
             echo "Error: ontwikkelbestanden in de plugin-zip"
             exit 1
           fi

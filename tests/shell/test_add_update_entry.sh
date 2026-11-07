@@ -21,13 +21,18 @@ else
 fi
 newUrl=$(sed -n '/<version>99.1.0<\/version>/,/<\/update>/p' "$tmp/updates.xml" | grep -m1 '<downloadurl' | sed -E 's#.*>([^<]+)</downloadurl>.*#\1#')
 same "download-URL van de nieuwe entry (UPDATE_DOWNLOAD_BASE of GitHub Release)" "$wantUrl" "$newUrl"
-grep -q "<version>${firstVersion}</version>" "$tmp/updates.xml" && pass "bestaande entry blijft" || bad "bestaande entry is verdwenen"
+# Een repo zonder release heeft nog geen entry om te bewaren of te ordenen.
+if [ -n "$firstVersion" ]; then
+  grep -q "<version>${firstVersion}</version>" "$tmp/updates.xml" && pass "bestaande entry blijft" || bad "bestaande entry is verdwenen"
+fi
 grep -q "<name>${UPDATE_NAME}</name>" "$tmp/updates.xml" && pass "naam uit UPDATE_NAME" || bad "UPDATE_NAME niet gebruikt"
 grep -qF "version=\"${UPDATE_TARGETPLATFORM}\"" "$tmp/updates.xml" && pass "targetplatform uit UPDATE_TARGETPLATFORM" || bad "UPDATE_TARGETPLATFORM niet gebruikt"
 # Nieuwste bovenaan: de nieuwe versie komt vóór de eerste bestaande.
 new_line=$(grep -n '<version>99.1.0</version>' "$tmp/updates.xml" | head -1 | cut -d: -f1)
 old_line=$(grep -n "<version>${firstVersion}</version>" "$tmp/updates.xml" | head -1 | cut -d: -f1)
-[ "$new_line" -lt "$old_line" ] && pass "nieuwste release staat bovenaan" || bad "nieuwe entry staat niet bovenaan"
+if [ -n "$firstVersion" ]; then
+  [ "$new_line" -lt "$old_line" ] && pass "nieuwste release staat bovenaan" || bad "nieuwe entry staat niet bovenaan"
+fi
 
 # Zonder pakket-zip (packages/99.1.0/ bestaat niet): wel een entry, geen <sha512> (issue #257).
 sed -n '/<version>99.1.0<\/version>/,/<\/update>/p' "$tmp/updates.xml" | grep -q '<sha512>' && bad "zonder zip toch een <sha512>" || pass "zonder pakket-zip geen <sha512>"

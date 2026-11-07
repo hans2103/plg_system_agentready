@@ -77,7 +77,10 @@ og merge-base --is-ancestor "$( cd "$work" && git rev-parse develop )" main && p
 same "  laatste commit op main is de release-commit" "chore(release): versie bijgewerkt naar 99.1.0" "$(og log -1 --format=%s main)"
 og log --format=%s main | grep -q '^Merge develop into main voor release 99.1.0$' && pass "  merge-commit met release-versie in het bericht" || bad "  merge-commit ontbreekt"
 same "  package.xml op origin/main heeft de nieuwe versie" "1" "$(og show main:package.xml | grep -c '<version>99.1.0</version>')"
-og show "main:${COMPONENT_DIR}/sql/updates/mysql/99.1.0.sql" > /dev/null 2>&1 && pass "  het updatebestand zit in de release-commit" || bad "  updatebestand ontbreekt in de release-commit"
+# Alleen in een repo met een component (COMPONENT_DIR) maakt package.sh een SQL-updatebestand.
+if [ -n "${COMPONENT_DIR:-}" ]; then
+  og show "main:${COMPONENT_DIR}/sql/updates/mysql/99.1.0.sql" > /dev/null 2>&1 && pass "  het updatebestand zit in de release-commit" || bad "  updatebestand ontbreekt in de release-commit"
+fi
 same "  het script staat weer op de branch waar het begon" "develop" "$( cd "$work" && git rev-parse --abbrev-ref HEAD )"
 same "  de werkmap is schoon" "" "$( cd "$work" && git status --porcelain )"
 

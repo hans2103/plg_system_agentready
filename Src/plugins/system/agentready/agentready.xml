@@ -16,6 +16,8 @@
 		<folder>src</folder>
 		<folder>vendor</folder>
 		<folder>language</folder>
+		<filename>composer.json</filename>
+		<filename>composer.lock</filename>
 	</files>
 
 	<config>

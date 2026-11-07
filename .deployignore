@@ -8,14 +8,7 @@
 *.bak
 # De CLAUDE.md-verwijzingen naar AIdocs zijn voor ontwikkelaars en horen niet in een installatie.
 *CLAUDE.md
-# composer.json/lock beschrijven alleen hoe vendor/ is gemaakt; de site heeft ze niet nodig.
-composer.json
-composer.lock
-# Tests en documentatie van gebundelde libraries.
+# Tests en documentatie van gebundelde libraries, en vendor/bin (staat ook in .gitignore).
 *vendor/*/tests/*
 *vendor/*/docs/*
 *vendor/bin/*
-*vendor/*/*/bin/*
-*vendor/*/*/.github/*
-*vendor/*/*/*.dist
-*vendor/*/*/psalm.xml
