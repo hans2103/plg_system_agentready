@@ -1,0 +1,20 @@
+{
+    "name": "hkweb/plg-system-agentready-vendor",
+    "description": "Bundled third-party PHP dependencies for plg_system_agentready (Joomla extensions ship their own deps).",
+    "type": "project",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.3",
+        "league/html-to-markdown": "^5.2"
+    },
+    "config": {
+        "vendor-dir": "vendor",
+        "sort-packages": true,
+        "preferred-install": "dist",
+        "optimize-autoloader": true,
+        "classmap-authoritative": true,
+        "platform": {
+            "php": "8.3.0"
+        }
+    }
+}
