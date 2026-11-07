@@ -5,6 +5,7 @@
 - 2026-11-07: `tidy()` leaves one space after the `#` of a heading (issue #1)
 - 2026-11-07: closer to Cloudflare: `MarkdownHeaders` (strip list, 6 MiB limit, site `Content-Signal` wins), site header/footer landmarks removed (issue #3)
 - 2026-11-07: `link_ai_catalog`: the ARD manifest `.well-known/ai-catalog.json` (`AgentReady::AI_CATALOG`) as `rel="ai-catalog"` in the Link header and as `<link>` in the head (`onBeforeCompileHead`), when the file exists (issue #000)
+- 2026-11-07: `link_mcp_server_card`: the MCP Server Card `.well-known/mcp/server-card.json` (`AgentReady::MCP_SERVER_CARD`) as `rel="describedby"` in the `Link` header, only when the file exists
 
 Last updated: 2026-11-07
 Verified against: 292a195
@@ -71,6 +72,7 @@ One `Link` header (`setHeader(…, true)`), merged with existing `Link` values b
 - `<{root}llms.txt>; rel="describedby"; type="text/markdown"`: `link_llms` and `JPATH_ROOT/llms.txt` exists;
 - `<{root}.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"`: `link_agent_skills` and the file exists;
 - `<{root}.well-known/ai-catalog.json>; rel="ai-catalog"; type="application/json"`: `aiCatalogEnabled()`;
+- `<{root}.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"`: `link_mcp_server_card` and the file exists (a static file: the CloudPanel vhost serves `/.well-known/` without PHP);
 - `<{sitemap}>; rel="sitemap"; type="application/xml"`: `sitemap_url` set (relative → `Uri::root()` before it);
 - `<{page URL}>; rel="alternate"; type="text/markdown"`: Markdown on and `link_markdown`.
 
@@ -101,7 +103,7 @@ Layout: `---` frontmatter with JSON-encoded values (valid YAML), body, then ````
 | Fieldset | Name | Default |
 |---|---|---|
 | basic (Markdown) | `markdown`, `content_selector`, `remove_selectors`, `frontmatter`, `jsonld` | 1, `main, [role=main], article, body`, `AgentReady::DEFAULT_REMOVE_SELECTORS`, 1, 1 |
-| links | `link_headers`, `link_llms`, `link_agent_skills`, `link_ai_catalog`, `sitemap_url`, `link_markdown` | 1, 1, 1, 1, '', 1 |
+| links | `link_headers`, `link_llms`, `link_agent_skills`, `link_ai_catalog`, `link_mcp_server_card`, `sitemap_url`, `link_markdown` | 1, 1, 1, 1, 1, '', 1 |
 | advanced | `skip_logged_in`, `skip_noindex`, `vary_html`, `content_signal` | 1, 1, 1, '' |
 
 The defaults of `content_selector` and `remove_selectors` exist twice (manifest and class constants); `PluginContractTest` keeps them equal.
