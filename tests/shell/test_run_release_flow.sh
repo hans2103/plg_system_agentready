@@ -21,14 +21,16 @@ cp -R "$repo/bin" "$work/bin"; cp "$repo/scripts.conf" "$work/"
   printf '<extension><version>26.1.0</version><creationDate>2026-01-01</creationDate></extension>\n' > package.xml
   for f in "${VERSIONED_MANIFESTS[@]}"; do mkdir -p "$(dirname "$f")"; printf '<extension><version>26.1.0</version></extension>\n' > "$f"; done
   for f in "${VERSIONED_JSON[@]}"; do mkdir -p "$(dirname "$f")"; printf '{\n  "version": "26.1.0"\n}\n' > "$f"; done
-  mkdir -p sql/migrations "$COMPONENT_DIR/sql/updates/mysql"; touch sql/migrations/.gitkeep "$COMPONENT_DIR/sql/updates/mysql/.gitkeep"
+  # Zoals de echte repo: sql/ en het updatebestand van het component alleen als die er zijn.
+  [ ! -d "$repo/sql" ] || { mkdir -p sql/migrations; touch sql/migrations/.gitkeep; }
+  [ -z "${COMPONENT_DIR:-}" ] || { mkdir -p "$COMPONENT_DIR/sql/updates/mysql"; touch "$COMPONENT_DIR/sql/updates/mysql/.gitkeep"; }
   # Nep-package.sh: stempelt de versie zoals het echte script en schrijft het updatebestand.
   cat > package.sh <<'SH'
 #!/bin/bash
 [ -z "$FAKE_PACKAGE_FAIL" ] || { echo "package.sh: mislukt (test)" >&2; exit 1; }
 version="$1"
 for f in package.xml $FAKE_MANIFESTS; do sed -i.bak -E "s#<version>[^<]+</version>#<version>${version}</version>#" "$f"; rm -f "$f.bak"; done
-mkdir -p "$FAKE_UPDATES"; echo "-- ${version}" > "$FAKE_UPDATES/${version}.sql"
+[ -z "$FAKE_UPDATES" ] || { mkdir -p "$FAKE_UPDATES"; echo "-- ${version}" > "$FAKE_UPDATES/${version}.sql"; }
 [ -z "$FAKE_EXTRA" ] || echo "${version}" >> "$FAKE_EXTRA"
 # Zoals het echte script: @since __DEPLOY_VERSION__ in Src/ wordt de versie.
 grep -rlI '__DEPLOY_VERSION__' Src 2>/dev/null | while IFS= read -r f; do sed -i.bak "s#__DEPLOY_VERSION__#${version}#g" "$f"; rm -f "$f.bak"; done
@@ -39,7 +41,7 @@ SH
   echo twee > feature2.txt; git add -A; git commit -q -m "feat: #2 twee"
   git push -q origin develop
 )
-export FAKE_MANIFESTS="${VERSIONED_MANIFESTS[*]}" FAKE_UPDATES="$COMPONENT_DIR/sql/updates/mysql"
+export FAKE_MANIFESTS="${VERSIONED_MANIFESTS[*]}" FAKE_UPDATES="${COMPONENT_DIR:+$COMPONENT_DIR/sql/updates/mysql}"
 rel() { ( cd "$work" && bash bin/run-release.sh "$@" ); }
 og() { git --git-dir="$origin" "$@"; }
 

@@ -257,11 +257,12 @@ bash package.sh "$version"
 
 # ─── Release-commit ────────────────────────────────────────────────────────────
 # Wat package.sh wijzigt: package.xml, de versie-manifests en -JSON, de geconsolideerde
-# migraties (sql/), het gegenereerde updatebestand van het component en de bestanden met
+# migraties (sql/, alleen in een repo met een database), het gegenereerde updatebestand van het component en de bestanden met
 # __DEPLOY_VERSION__.
 stage="release-commit"
 info "Wijzigingen committen..."
-releasePaths=(package.xml sql)
+releasePaths=(package.xml)
+[ ! -d sql ] || releasePaths+=(sql)
 [ -z "${COMPONENT_DIR:-}" ] || releasePaths+=("${COMPONENT_DIR}/sql/updates")
 for f in "${VERSIONED_MANIFESTS[@]}" "${VERSIONED_JSON[@]}"; do releasePaths+=("$f"); done
 for f in ${deployVersionFiles[@]+"${deployVersionFiles[@]}"}; do releasePaths+=("$f"); done
