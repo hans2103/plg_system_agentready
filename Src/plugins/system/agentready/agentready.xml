@@ -7,7 +7,7 @@
 	<license>GNU General Public License version 2 or later; see LICENSE.txt</license>
 	<authorEmail>info@hkweb.nl</authorEmail>
 	<authorUrl>https://hkweb.nl</authorUrl>
-	<version>26.45.0</version>
+	<version>26.45.1</version>
 	<description>PLG_SYSTEM_AGENTREADY_XML_DESCRIPTION</description>
 	<namespace path="src">HKweb\Plugin\System\AgentReady</namespace>
 

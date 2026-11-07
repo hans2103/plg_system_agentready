@@ -80,7 +80,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 * The MCP Server Card (SEP-1649), relative to the site root.
 	 *
 	 * @var    string
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.1
 	 */
 	public const MCP_SERVER_CARD = '.well-known/mcp/server-card.json';
 
