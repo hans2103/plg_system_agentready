@@ -1,0 +1,21 @@
+# .deployignore — zip-patronen die package.sh en bin/preflight.sh uitsluiten bij het zippen
+# van elke extensiemap. Eén patroon per regel, gematcht tegen het volledige pad in de zip
+# (zip -x-conventie), dus begin met * voor bestanden in submappen. Lege regels en regels die
+# met # beginnen worden genegeerd.
+*.DS_Store
+*.git/*
+*.gitignore
+*.bak
+# De CLAUDE.md-verwijzingen naar AIdocs zijn voor ontwikkelaars en horen niet in een installatie.
+*CLAUDE.md
+# composer.json/lock beschrijven alleen hoe vendor/ is gemaakt; de site heeft ze niet nodig.
+composer.json
+composer.lock
+# Tests en documentatie van gebundelde libraries.
+*vendor/*/tests/*
+*vendor/*/docs/*
+*vendor/bin/*
+*vendor/*/*/bin/*
+*vendor/*/*/.github/*
+*vendor/*/*/*.dist
+*vendor/*/*/psalm.xml
