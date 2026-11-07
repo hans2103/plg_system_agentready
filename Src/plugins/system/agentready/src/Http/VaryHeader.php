@@ -19,7 +19,7 @@ namespace HKweb\Plugin\System\AgentReady\Http;
 /**
  * Merges a field name into the existing Vary header values without duplicates.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class VaryHeader
 {
@@ -31,7 +31,7 @@ final class VaryHeader
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function merge(array $existing, string $add = 'Accept'): string
 	{

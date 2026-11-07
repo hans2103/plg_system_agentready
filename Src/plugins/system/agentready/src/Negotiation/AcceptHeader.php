@@ -23,7 +23,7 @@ namespace HKweb\Plugin\System\AgentReady\Negotiation;
  * high as that of HTML (text/html, else text/*, else *\/*). Wildcards never ask for Markdown, so a
  * browser or crawler without text/markdown always gets HTML.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class AcceptHeader
 {
@@ -34,7 +34,7 @@ final class AcceptHeader
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function prefersMarkdown(?string $accept): bool
 	{
@@ -61,7 +61,7 @@ final class AcceptHeader
 	 *
 	 * @return  array<string, float>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function parse(string $accept): array
 	{

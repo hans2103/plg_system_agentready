@@ -31,7 +31,7 @@ use DOMXPath;
  *   clean conversion (see tidy()), with relative href/src made absolute against the page URL
  *   (or a <base href>).
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class PageExtractor
 {
@@ -45,7 +45,7 @@ final class PageExtractor
 	 *
 	 * @return  ExtractedPage|null
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function extract(string $html, string $contentSelectors, string $removeSelectors, string $pageUrl): ?ExtractedPage
 	{
@@ -103,7 +103,7 @@ final class PageExtractor
 	 *
 	 * @return  array<string, string>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function meta(DOMXPath $xpath): array
 	{
@@ -139,7 +139,7 @@ final class PageExtractor
 	 *
 	 * @return  list<string>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function jsonLd(DOMXPath $xpath): array
 	{
@@ -163,7 +163,7 @@ final class PageExtractor
 	 * with role banner or contentinfo. A header inside an article (its title) is not one.
 	 *
 	 * @var    string
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	private const SITE_LANDMARKS = './/*[(self::header or self::footer)'
 		. ' and not(ancestor::article or ancestor::aside or ancestor::main or ancestor::nav or ancestor::section)]'
@@ -179,7 +179,7 @@ final class PageExtractor
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function removeNodes(DOMXPath $xpath, DOMElement $content, string $selectors): void
 	{
@@ -212,7 +212,7 @@ final class PageExtractor
 	/**
 	 * Block-level elements: a link around one of these is a clickable card.
 	 *
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	private const BLOCK_ELEMENTS = ['address', 'article', 'aside', 'blockquote', 'dd', 'div', 'dl', 'dt', 'figcaption', 'figure', 'footer', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'header', 'hr', 'li', 'ol', 'p', 'pre', 'section', 'table', 'ul'];
 
@@ -231,7 +231,7 @@ final class PageExtractor
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function tidy(DOMXPath $xpath, DOMElement $content): void
 	{
@@ -285,7 +285,7 @@ final class PageExtractor
 	 *
 	 * @return  list<DOMNode>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function nodes(DOMXPath $xpath, string $query, DOMNode $context): array
 	{
@@ -302,7 +302,7 @@ final class PageExtractor
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function baseUrl(DOMXPath $xpath, string $pageUrl): string
 	{
@@ -324,7 +324,7 @@ final class PageExtractor
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function absolutize(DOMXPath $xpath, DOMElement $content, string $baseUrl): void
 	{

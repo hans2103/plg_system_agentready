@@ -44,35 +44,35 @@ use Joomla\Event\SubscriberInterface;
  * - The ARD manifest (.well-known/ai-catalog.json) as Link header and as <link rel="ai-catalog"> in
  *   the HTML head.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class AgentReady extends CMSPlugin implements SubscriberInterface
 {
 	/**
 	 * Default selectors for the main content, in order of preference.
 	 *
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	public const DEFAULT_CONTENT_SELECTOR = 'main, [role=main], article, body';
 
 	/**
 	 * Default selectors removed from the main content.
 	 *
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	public const DEFAULT_REMOVE_SELECTORS = 'script, style, noscript, template, svg, canvas, iframe, object, embed, form, button, input, select, textarea, nav, dialog, [hidden], [aria-hidden=true]';
 
 	/**
 	 * Page cache key part of the Markdown variant.
 	 *
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	public const CACHE_KEY = 'agentready:markdown';
 
 	/**
 	 * The Agentic Resource Discovery manifest, relative to the site root.
 	 *
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	public const AI_CATALOG = '.well-known/ai-catalog.json';
 
@@ -82,7 +82,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  array<string, mixed>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function getSubscribedEvents(): array
 	{
@@ -106,7 +106,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public function onAfterRoute(AfterRouteEvent $event): void
 	{
@@ -133,7 +133,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public function onBeforeCompileHead(BeforeCompileHeadEvent $event): void
 	{
@@ -157,7 +157,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public function onPageCacheGetKey(GetKeyEvent $event): void
 	{
@@ -176,7 +176,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public function onAfterRender(AfterRenderEvent $event): void
 	{
@@ -206,7 +206,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function markdownEnabled(): bool
 	{
@@ -218,7 +218,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function aiCatalogEnabled(): bool
 	{
@@ -236,7 +236,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function addLinks(CMSApplication $app): void
 	{
@@ -279,7 +279,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  list<string>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function headerValues(CMSApplication $app, string $name): array
 	{
@@ -301,7 +301,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function isHtmlSitePage(CMSApplication $app): bool
 	{
@@ -331,7 +331,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function mayConvert(CMSApplication $app): bool
 	{
@@ -358,7 +358,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function convert(CMSApplication $app): bool
 	{
@@ -433,7 +433,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function addVary(CMSApplication $app): void
 	{
@@ -453,7 +453,7 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private function acceptHeader(CMSApplication $app): string
 	{

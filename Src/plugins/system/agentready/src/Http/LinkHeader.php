@@ -19,7 +19,7 @@ namespace HKweb\Plugin\System\AgentReady\Http;
 /**
  * Builds and merges Link header values (RFC 8288).
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class LinkHeader
 {
@@ -32,7 +32,7 @@ final class LinkHeader
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function link(string $uri, string $rel, string $type = ''): string
 	{
@@ -50,7 +50,7 @@ final class LinkHeader
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function merge(array $existing, array $links): string
 	{
@@ -78,7 +78,7 @@ final class LinkHeader
 	 *
 	 * @return  list<string>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function split(string $header): array
 	{
@@ -115,7 +115,7 @@ final class LinkHeader
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function key(string $value): string
 	{

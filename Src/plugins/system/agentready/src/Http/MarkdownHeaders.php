@@ -19,7 +19,7 @@ namespace HKweb\Plugin\System\AgentReady\Http;
 /**
  * Response rules for a Markdown answer, as Cloudflare's Markdown for Agents applies them.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class MarkdownHeaders
 {
@@ -27,7 +27,7 @@ final class MarkdownHeaders
 	 * Headers that describe the HTML representation and are removed from the Markdown answer.
 	 *
 	 * @var    list<string>
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	public const STRIP = ['ETag', 'Last-Modified', 'Content-Length', 'Content-Encoding', 'Content-Range', 'Transfer-Encoding'];
 
@@ -35,7 +35,7 @@ final class MarkdownHeaders
 	 * Largest HTML body (uncompressed, in bytes) that is converted: 6 MiB, as Cloudflare.
 	 *
 	 * @var    integer
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	public const MAX_HTML_BYTES = 6291456;
 
@@ -46,7 +46,7 @@ final class MarkdownHeaders
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function fits(string $html): bool
 	{
@@ -63,7 +63,7 @@ final class MarkdownHeaders
 	 *
 	 * @return  string|null
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function contentSignal(array $existing, string $setting): ?string
 	{
