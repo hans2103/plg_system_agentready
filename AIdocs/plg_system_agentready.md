@@ -3,9 +3,10 @@
 ### History
 - 2026-11-07: page created with the first version: Markdown for Agents merged with the agent discovery Link headers of the gehandicaptenvalkenswaard.nl plugin (issue #1)
 - 2026-11-07: `tidy()` leaves one space after the `#` of a heading (issue #1)
+- 2026-11-07: closer to Cloudflare: `MarkdownHeaders` (strip list, 6 MiB limit, site `Content-Signal` wins), site header/footer landmarks removed (issue #3)
 
 Last updated: 2026-11-07
-Verified against: 29fab20
+Verified against: 21c74b4
 Covers:
 - Src/plugins/system/agentready/
 
@@ -33,6 +34,7 @@ Design and reasoning: `docs/superpowers/specs/2026-11-07-agent-ready-design.md`.
 | `src/Markdown/MarkdownRenderer.php` | `render(page, frontmatter, jsonLd)`, `tidy(markdown)`, `estimateTokens(markdown)` |
 | `src/Http/VaryHeader.php` | `merge(existing, add = 'Accept')` |
 | `src/Http/LinkHeader.php` | `link(uri, rel, type)`, `merge(existing, links)` |
+| `src/Http/MarkdownHeaders.php` | `STRIP` (headers removed), `MAX_HTML_BYTES` (6 MiB), `fits(html)`, `contentSignal(existing, setting): ?string` |
 | `composer.json`, `composer.lock`, `vendor/` | Bundled `league/html-to-markdown` 5.2 (MIT), platform PHP 8.3.0, classmap-authoritative; committed |
 
 ## Events
@@ -55,9 +57,11 @@ With `link_headers`: `addLinks()`.
 
 ### convert()
 
-Loads `vendor/autoload.php` lazily, runs `PageExtractor::extract()` on the body with `content_selector` (empty falls back to the default), `remove_selectors` and the current URL, then `MarkdownRenderer::render()` with `frontmatter` and `jsonld`. A `Throwable` is logged (`Log::WARNING`, category `agentready`) and leaves the HTML. An empty result leaves the HTML.
+Stops (HTML) when the body is larger than `MarkdownHeaders::MAX_HTML_BYTES`. Loads `vendor/autoload.php` lazily, runs `PageExtractor::extract()` on the body with `content_selector` (empty falls back to the default), `remove_selectors` and the current URL, then `MarkdownRenderer::render()` with `frontmatter` and `jsonld`. A `Throwable` is logged (`Log::WARNING`, category `agentready`) and leaves the HTML. An empty result leaves the HTML.
 
-On success: body = Markdown; `mimeType` `text/markdown`, `charSet` utf-8; headers `Content-Type: text/markdown; charset=utf-8`, `x-markdown-tokens`, `Vary` with `Accept`, `Content-Signal` when `content_signal` is set; `ETag`, `Content-Length`, `Content-Encoding` removed from the response.
+On success: body = Markdown; `mimeType` `text/markdown`, `charSet` utf-8; headers `Content-Type: text/markdown; charset=utf-8`, `x-markdown-tokens`, `Vary` with `Accept`, `Content-Signal` from `content_signal` unless the response already has one (`MarkdownHeaders::contentSignal`, no default); every `MarkdownHeaders::STRIP` header removed from the response; `modifiedDate` cleared so `respond()` adds no `Last-Modified` to a cacheable page (an uncachable page still gets Joomla's response-time `Last-Modified`, set after the plugin runs).
+
+Deliberate differences from Cloudflare: `<title>` fallback for the frontmatter title, `x-markdown-tokens`, no default `Content-Signal`.
 
 ### addLinks()
 
@@ -77,7 +81,7 @@ One `Link` header (`setHeader(…, true)`), merged with existing `Link` values b
 - **meta**: title = `meta[name=title]` → `og:title` → `<title>`; description = `meta[name=description]` → `og:description`; image = `og:image`; whitespace collapsed.
 - **JSON-LD**: every `script[type=application/ld+json]` in the document (case-insensitive type), trimmed.
 - **content**: the first match of the content selectors in list order (not document order); null when none matches.
-- **removeNodes**: comments and every match of the remove selectors inside the content.
+- **removeNodes**: comments, the site landmarks (`SITE_LANDMARKS`: `header`/`footer` without an `article`, `aside`, `main`, `nav` or `section` ancestor, and `[role=banner]`/`[role=contentinfo]`, as the HTML spec defines banner and contentinfo) and every match of the remove selectors inside the content.
 - **tidy**: removes `img[alt=""]`; unwraps links to `#…` and `javascript:`; a link around block elements (clickable card) becomes a link around its texts joined with spaces; two sibling elements with nothing between them get a space text node (name and job title in separate spans).
 - **absolutize**: `href` and `src` resolved against `<base href>` (itself resolved) or the page URL.
 
@@ -101,7 +105,7 @@ The defaults of `content_selector` and `remove_selectors` exist twice (manifest 
 
 ## Tests
 
-`tests/unit/`: `AcceptHeaderTest`, `SelectorTest`, `UrlResolverTest`, `PageExtractorTest`, `MarkdownRendererTest`, `VaryHeaderTest`, `LinkHeaderTest`, `ConversionCasesTest` (end-to-end cases from gehandicaptenvalkenswaard.nl and momentsuntil.com) and `PluginContractTest` (manifest ↔ class settings ↔ en-GB/nl-NL strings, subscribed events, package version). `AgentReady` itself has no unit test (it needs Joomla); test it on a DDEV site (`docs/Ontwikkelworkflow.md`).
+`tests/unit/`: `AcceptHeaderTest`, `SelectorTest`, `UrlResolverTest`, `PageExtractorTest`, `MarkdownRendererTest`, `VaryHeaderTest`, `LinkHeaderTest`, `MarkdownHeadersTest`, `ConversionCasesTest` (end-to-end cases from gehandicaptenvalkenswaard.nl and momentsuntil.com) and `PluginContractTest` (manifest ↔ class settings ↔ en-GB/nl-NL strings, subscribed events, package version). `AgentReady` itself has no unit test (it needs Joomla); test it on a DDEV site (`docs/Ontwikkelworkflow.md`).
 
 ## See also
 

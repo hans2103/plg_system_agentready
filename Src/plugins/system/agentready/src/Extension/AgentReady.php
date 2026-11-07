@@ -18,6 +18,7 @@ namespace HKweb\Plugin\System\AgentReady\Extension;
 
 use HKweb\Plugin\System\AgentReady\Html\PageExtractor;
 use HKweb\Plugin\System\AgentReady\Http\LinkHeader;
+use HKweb\Plugin\System\AgentReady\Http\MarkdownHeaders;
 use HKweb\Plugin\System\AgentReady\Http\VaryHeader;
 use HKweb\Plugin\System\AgentReady\Markdown\MarkdownRenderer;
 use HKweb\Plugin\System\AgentReady\Negotiation\AcceptHeader;
@@ -295,8 +296,8 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	}
 
 	/**
-	 * Converts the body and sets the Markdown headers. False (HTML untouched) when the page has no
-	 * content to convert or the conversion fails.
+	 * Converts the body and sets the Markdown headers. False (HTML untouched) when the page is larger
+	 * than MarkdownHeaders::MAX_HTML_BYTES, has no content to convert or the conversion fails.
 	 *
 	 * @param   CMSApplication  $app  The application
 	 *
@@ -306,11 +307,17 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 */
 	private function convert(CMSApplication $app): bool
 	{
+		$html = (string) $app->getBody();
+
+		if (!MarkdownHeaders::fits($html)) {
+			return false;
+		}
+
 		try {
 			require_once \dirname(__DIR__, 2) . '/vendor/autoload.php';
 
 			$page = PageExtractor::extract(
-				(string) $app->getBody(),
+				$html,
 				trim((string) $this->params->get('content_selector', self::DEFAULT_CONTENT_SELECTOR)) ?: self::DEFAULT_CONTENT_SELECTOR,
 				(string) $this->params->get('remove_selectors', self::DEFAULT_REMOVE_SELECTORS),
 				Uri::getInstance()->toString()
@@ -338,20 +345,27 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 		$app->setHeader('x-markdown-tokens', (string) MarkdownRenderer::estimateTokens($markdown), true);
 		$this->addVary($app);
 
-		$signal = trim((string) $this->params->get('content_signal', ''));
+		$signal = MarkdownHeaders::contentSignal(
+			$this->headerValues($app, 'Content-Signal'),
+			(string) $this->params->get('content_signal', '')
+		);
 
-		if ($signal !== '') {
+		if ($signal !== null) {
 			$app->setHeader('Content-Signal', $signal, true);
 		}
 
 		// Headers that describe the HTML body no longer match the Markdown.
 		$response = $app->getResponse();
 
-		foreach (['ETag', 'Content-Length', 'Content-Encoding'] as $name) {
+		foreach (MarkdownHeaders::STRIP as $name) {
 			$response = $response->withoutHeader($name);
 		}
 
 		$app->setResponse($response);
+
+		// Without a modified date respond() adds no Last-Modified to a cacheable page. An uncachable
+		// page still gets Joomla's "always modified" Last-Modified (the response time) in respond().
+		$app->modifiedDate = null;
 
 		return true;
 	}

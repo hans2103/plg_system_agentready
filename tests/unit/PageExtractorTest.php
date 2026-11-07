@@ -70,6 +70,27 @@ check('list order wins, not document order', $order?->contentHtml, 'M');
 $base = PageExtractor::extract('<head><base href="/sub/"></head><body><a href="x">x</a></body>', 'body', '', 'https://example.com/a/b');
 check('base href respected', $base?->contentHtml, '<a href="https://example.com/sub/x">x</a>');
 
+$landmarks = <<<'HTML'
+<body>
+<header class="site">Site header</header>
+<div role="banner">Banner div</div>
+<article><header><h1>Article title</h1></header><p>Text</p><footer>Article footer</footer></article>
+<section><header>Section header</header></section>
+<div class="wrap"><footer>Wrapped site footer</footer></div>
+<div role="contentinfo">Contentinfo div</div>
+<footer>Site footer</footer>
+</body>
+HTML;
+$body = PageExtractor::extract($landmarks, 'body', '', 'https://example.com/')?->contentHtml ?? '';
+foreach (['Site header', 'Banner div', 'Wrapped site footer', 'Contentinfo div', 'Site footer'] as $gone) {
+	check("site landmark removed: $gone", str_contains($body, $gone), false);
+}
+foreach (['Article title', 'Article footer', 'Section header', 'Text'] as $kept) {
+	check("sectioning header/footer kept: $kept", str_contains($body, $kept), true);
+}
+$inMain = PageExtractor::extract('<body><main><header><h1>Main title</h1></header><p>x</p></main></body>', 'main', '', 'https://example.com/');
+check('header inside main kept', $inMain?->contentHtml, '<header><h1>Main title</h1></header> <p>x</p>');
+
 check('empty html', PageExtractor::extract('   ', 'body', '', 'https://example.com/'), null);
 check('no matching selector', PageExtractor::extract('<body><p>x</p></body>', 'main', '', 'https://example.com/'), null);
 check('invalid selectors only', PageExtractor::extract('<body><p>x</p></body>', 'a:hover', '', 'https://example.com/'), null);
