@@ -1,0 +1,14 @@
+# .deployignore — zip-patronen die package.sh en bin/preflight.sh uitsluiten bij het zippen
+# van elke extensiemap. Eén patroon per regel, gematcht tegen het volledige pad in de zip
+# (zip -x-conventie), dus begin met * voor bestanden in submappen. Lege regels en regels die
+# met # beginnen worden genegeerd.
+*.DS_Store
+*.git/*
+*.gitignore
+*.bak
+# De CLAUDE.md-verwijzingen naar AIdocs zijn voor ontwikkelaars en horen niet in een installatie.
+*CLAUDE.md
+# Tests en documentatie van gebundelde libraries, en vendor/bin (staat ook in .gitignore).
+*vendor/*/tests/*
+*vendor/*/docs/*
+*vendor/bin/*

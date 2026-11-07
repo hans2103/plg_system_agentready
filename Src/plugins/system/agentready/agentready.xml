@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="system" method="upgrade">
+	<name>plg_system_agentready</name>
+	<author>Hans Kuijpers</author>
+	<creationDate>2026-11-07</creationDate>
+	<copyright>Copyright (C) 2026 HKweb. All rights reserved.</copyright>
+	<license>GNU General Public License version 2 or later; see LICENSE.txt</license>
+	<authorEmail>info@hkweb.nl</authorEmail>
+	<authorUrl>https://hkweb.nl</authorUrl>
+	<version>26.45.0</version>
+	<description>PLG_SYSTEM_AGENTREADY_XML_DESCRIPTION</description>
+	<namespace path="src">HKweb\Plugin\System\AgentReady</namespace>
+
+	<files>
+		<folder plugin="agentready">services</folder>
+		<folder>src</folder>
+		<folder>vendor</folder>
+		<folder>language</folder>
+		<filename>composer.json</filename>
+		<filename>composer.lock</filename>
+	</files>
+
+	<config>
+		<fields name="params">
+			<fieldset name="basic" label="PLG_SYSTEM_AGENTREADY_FIELDSET_MARKDOWN">
+				<field
+					name="markdown"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_MARKDOWN_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_MARKDOWN_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="content_selector"
+					showon="markdown:1"
+					type="text"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_CONTENT_SELECTOR_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_CONTENT_SELECTOR_DESC"
+					default="main, [role=main], article, body"
+					filter="string"
+				/>
+				<field
+					name="remove_selectors"
+					showon="markdown:1"
+					type="textarea"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_REMOVE_SELECTORS_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_REMOVE_SELECTORS_DESC"
+					default="script, style, noscript, template, svg, canvas, iframe, object, embed, form, button, input, select, textarea, nav, dialog, [hidden], [aria-hidden=true]"
+					rows="4"
+					filter="string"
+				/>
+				<field
+					name="frontmatter"
+					showon="markdown:1"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_FRONTMATTER_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_FRONTMATTER_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="jsonld"
+					showon="markdown:1"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_JSONLD_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_JSONLD_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+			</fieldset>
+			<fieldset name="links" label="PLG_SYSTEM_AGENTREADY_FIELDSET_LINKS">
+				<field
+					name="link_headers"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_LINK_HEADERS_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_LINK_HEADERS_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="link_llms"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_LINK_LLMS_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_LINK_LLMS_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+					showon="link_headers:1"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="link_agent_skills"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_LINK_AGENT_SKILLS_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_LINK_AGENT_SKILLS_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+					showon="link_headers:1"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="link_ai_catalog"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_LINK_AI_CATALOG_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_LINK_AI_CATALOG_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+					showon="link_headers:1"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="sitemap_url"
+					type="text"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_SITEMAP_URL_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_SITEMAP_URL_DESC"
+					hint="sitemap.xml"
+					default=""
+					filter="string"
+					showon="link_headers:1"
+				/>
+				<field
+					name="link_markdown"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_LINK_MARKDOWN_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_LINK_MARKDOWN_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+					showon="link_headers:1[AND]markdown:1"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+			</fieldset>
+			<fieldset name="advanced" label="PLG_SYSTEM_AGENTREADY_FIELDSET_ADVANCED">
+				<field
+					name="skip_logged_in"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_SKIP_LOGGED_IN_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_SKIP_LOGGED_IN_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="skip_noindex"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_SKIP_NOINDEX_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_SKIP_NOINDEX_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="vary_html"
+					type="radio"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_VARY_HTML_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_VARY_HTML_DESC"
+					layout="joomla.form.field.radio.switcher"
+					default="1"
+					filter="integer"
+				>
+					<option value="0">JNO</option>
+					<option value="1">JYES</option>
+				</field>
+				<field
+					name="content_signal"
+					type="text"
+					label="PLG_SYSTEM_AGENTREADY_FIELD_CONTENT_SIGNAL_LABEL"
+					description="PLG_SYSTEM_AGENTREADY_FIELD_CONTENT_SIGNAL_DESC"
+					hint="ai-train=no, search=yes, ai-input=yes"
+					default=""
+					filter="string"
+				/>
+			</fieldset>
+		</fields>
+	</config>
+</extension>

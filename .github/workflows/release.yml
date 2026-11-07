@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # bijv. v26.38.6
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Get version from tag
+        id: get_version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Version: $VERSION"
+
+      - name: Verify version matches package.xml
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          PACKAGE_VERSION=$(grep -m1 '<version>' package.xml | sed -E 's#.*<version>([^<]+)</version>.*#\1#')
+          if [ "$VERSION" != "$PACKAGE_VERSION" ]; then
+            echo "Error: tag-versie ($VERSION) komt niet overeen met package.xml ($PACKAGE_VERSION)"
+            exit 1
+          fi
+          echo "Version verified: $VERSION"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          coverage: none
+
+      - name: Install zip en git-cliff
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zip python3-pip
+          pip install git-cliff --break-system-packages
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          export PATH="$HOME/.local/bin:$PATH"
+          git-cliff --version
+
+      - name: Build package
+        run: |
+          chmod +x package.sh
+          ./package.sh "${{ steps.get_version.outputs.version }}"
+
+      - name: Genereer release notes met git-cliff
+        run: |
+          git-cliff --latest --strip header --output release_notes.md
+          echo "Release notes:"
+          cat release_notes.md
+
+      # De stappen hieronder hebben effect buiten de runner. Ze worden overgeslagen als LOCAL_ACT is
+      # gezet (bin/run-act.sh). Guard op LOCAL_ACT, nooit op ACT: `act` zet zelf ACT=true.
+      - name: Create GitHub Release
+        if: ${{ !env.LOCAL_ACT }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          PACKAGE_FILE="packages/${VERSION}/pkg_agentready-${VERSION}.zip"
+          if [ ! -f "$PACKAGE_FILE" ]; then
+            echo "Error: pakket niet gevonden: $PACKAGE_FILE"
+            exit 1
+          fi
+          gh release create "v${VERSION}" "$PACKAGE_FILE" \
+            --title "Release v${VERSION}" \
+            --notes-file release_notes.md \
+            --verify-tag
+
+      - name: Update updates.xml
+        if: ${{ !env.LOCAL_ACT }}
+        run: |
+          VERSION="${{ steps.get_version.outputs.version }}"
+          # De checksum (sha512) is van precies de zip in de GitHub Release (issue #257). Joomla leest
+          # updates.xml van main (raw.githubusercontent.com) en downloadt de zip uit de GitHub Release.
+          php bin/add-update-entry.php "$VERSION" --zip="packages/${VERSION}/pkg_agentready-${VERSION}.zip"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add updates.xml
+          if git diff --staged --quiet; then
+            echo "updates.xml is al bijgewerkt voor v${VERSION}"
+            exit 0
+          fi
+          git commit -m "chore(release): updates.xml uitgebreid met v${VERSION}"
+
+          # package.sh heeft datum en versie in gevolgde bestanden gestempeld; niet committen en
+          # niet in de weg laten staan voor de rebase hieronder.
+          git checkout -- .
+
+          for i in 1 2 3 4 5; do
+            if git push origin HEAD:main; then
+              echo "updates.xml bijgewerkt en gepusht naar main"
+              exit 0
+            fi
+            echo "Push afgewezen (main is intussen verder), rebasen en opnieuw proberen (poging $i)..."
+            git fetch origin main
+            git rebase FETCH_HEAD
+          done
+          echo "Error: kon updates.xml niet naar main pushen na 5 pogingen"
+          exit 1
