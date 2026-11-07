@@ -74,7 +74,7 @@ final class MarkdownRenderer
 
 	/**
 	 * Cleans the converter output outside fenced code blocks: whitespace-only lines become empty,
-	 * stray indentation of one to three spaces and trailing spaces go (two trailing spaces after
+	 * stray indentation of one to three spaces, extra spaces after a heading's # and trailing spaces go (two trailing spaces after
 	 * text stay: that is a hard line break), runs of blank lines become one, and HTML entities
 	 * become their characters (except &lt; and &gt;, which keep text from turning into HTML).
 	 *
@@ -106,6 +106,7 @@ final class MarkdownRenderer
 			}
 
 			$line = preg_replace('/^ {1,3}(?=\S)/', '', $line) ?? $line;
+			$line = preg_replace('/^(#{1,6})\s{2,}/', '$1 ', $line) ?? $line;
 			$line = preg_match('/\S  $/', $line) === 1 ? $line : rtrim($line);
 
 			$lines[$i] = preg_replace_callback(

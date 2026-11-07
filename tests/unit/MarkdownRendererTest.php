@@ -43,6 +43,7 @@ check('tokens of empty', MarkdownRenderer::estimateTokens(''), 0);
 
 check('tidy: whitespace-only lines and blank runs', MarkdownRenderer::tidy("a\n \n  \n\n\nb"), "a\n\nb");
 check('tidy: stray indentation and trailing space', MarkdownRenderer::tidy(" [x](y) \n   z"), "[x](y)\nz");
+check('tidy: one space after heading marks', MarkdownRenderer::tidy("#  How it works\n##   Two"), "# How it works\n## Two");
 check('tidy: four-space nesting kept', MarkdownRenderer::tidy("- a\n    - b"), "- a\n    - b");
 check('tidy: hard break kept', MarkdownRenderer::tidy("Adres  \nPostcode"), "Adres  \nPostcode");
 check('tidy: entities decoded, lt/gt kept', MarkdownRenderer::tidy('Sophie &amp; Jamie &rsquo; &#169; &lt;b&gt;'), 'Sophie & Jamie ’ © &lt;b&gt;');
