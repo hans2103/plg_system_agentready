@@ -10,7 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Agent Ready is a Joomla package (`pkg_agentready`) with one system plugin, `plg_system_agentready`, that makes a site readable for AI agents:
 
 - **Markdown for Agents**: `Accept: text/markdown` gets a Markdown version of the page (frontmatter, main content, JSON-LD), as Cloudflare's Markdown for Agents does on paid plans.
-- **Link headers** (RFC 8288) on HTML pages to `llms.txt`, `.well-known/agent-skills/index.json`, the sitemap and the Markdown alternate.
+- **Link headers** (RFC 8288) on HTML pages to `llms.txt`, `.well-known/agent-skills/index.json`, `.well-known/ai-catalog.json` (also as `<link rel="ai-catalog">` in the head), the sitemap and the Markdown alternate.
 
 Public repo, reusable on any site. First user: momentsuntil.com (Cloudflare Free); also gehandicaptenvalkenswaard.nl.
 
