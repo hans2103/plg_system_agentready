@@ -44,14 +44,22 @@ A handmade countdown for any moment. [Start a calendar →](https://example.com/
 ```
 ~~~
 
-`x-markdown-tokens` is an estimate (characters / 4). `ETag` and `Content-Length` are dropped; all other headers (CSP, HSTS, `Cache-Control`, cookies) stay.
+`x-markdown-tokens` is an estimate (characters / 4). As Cloudflare does, `ETag`, `Last-Modified`, `Content-Length`, `Content-Encoding`, `Content-Range` and `Transfer-Encoding` are dropped; all other headers (CSP, HSTS, `Cache-Control`, `Expires`, cookies) stay. One exception: on a page Joomla marks as uncachable, Joomla itself adds `Last-Modified` with the response time after the plugin has run.
+
+A `Content-Signal` the site already sends is kept; otherwise the plugin sends the one from its settings, or none. Unlike Cloudflare there is no default (`ai-train=yes, search=yes, ai-input=yes`): what agents may do with the content is the site owner's call.
+
+### Differences from Cloudflare
+
+- The frontmatter `title` falls back to `<title>` when the page has no `meta name="title"` or `og:title`.
+- `x-markdown-tokens` is sent.
+- No default `Content-Signal` (see above).
 
 ## When it converts
 
 Markdown only when **all** of these hold:
 
 - the request has an explicit `text/markdown` with a `q` at least as high as HTML's (`text/html`, else `text/*`, else `*/*`); `*/*` alone never asks for Markdown;
-- front end, `GET` or `HEAD`, an HTML document with status 200;
+- front end, `GET` or `HEAD`, an HTML document with status 200, at most 6 MiB of HTML (Cloudflare's limit);
 - the visitor is a guest (setting) and the page has no `noindex` in its robots meta tag or `X-Robots-Tag` (setting).
 
 Otherwise the HTML goes out unchanged. If the conversion fails, the HTML goes out and a warning is logged in the `agentready` log category.
@@ -66,6 +74,8 @@ Otherwise the HTML goes out unchanged. If the conversion fails, the HTML goes ou
 | Markdown | Frontmatter, JSON-LD | on, on |
 | Link headers | Link headers on/off; llms.txt and agent skills index (only when the file exists in the site root); sitemap URL (empty = none); Markdown alternate | on |
 | Advanced | Not for logged-in users, not for noindex pages, `Vary: Accept` on HTML, `Content-Signal` header (empty = none) | on, on, on, empty |
+
+The site header and footer always go, as the HTML spec defines them: a `header` or `footer` outside `article`, `aside`, `main`, `nav` and `section`, and `[role=banner]` and `[role=contentinfo]`. The header of an article (its title) stays.
 
 The selectors support `tag`, `#id`, `.class`, `[attr]`, `[attr=value]`, compounds and the space and `>` combinators. Relative links and image sources in the Markdown become absolute; links to `#fragments` or `javascript:` become plain text; images with `alt=""` are left out.
 

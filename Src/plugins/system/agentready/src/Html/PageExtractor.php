@@ -27,7 +27,7 @@ use DOMXPath;
  * - metadata for the frontmatter (title, description, image);
  * - all JSON-LD blocks of the whole document;
  * - the main content: the first element that matches the content selectors (in list order),
- *   without the elements matching the remove selectors and without comments, tidied for a
+ *   without the site header and footer, the elements matching the remove selectors and comments, tidied for a
  *   clean conversion (see tidy()), with relative href/src made absolute against the page URL
  *   (or a <base href>).
  *
@@ -158,7 +158,20 @@ final class PageExtractor
 	}
 
 	/**
-	 * Removes comments and the elements matching the remove selectors from the content.
+	 * The site header and footer, as the HTML spec defines the banner and contentinfo landmarks:
+	 * a header or footer that is not inside article, aside, main, nav or section, and any element
+	 * with role banner or contentinfo. A header inside an article (its title) is not one.
+	 *
+	 * @var    string
+	 * @since  __DEPLOY_VERSION__
+	 */
+	private const SITE_LANDMARKS = './/*[(self::header or self::footer)'
+		. ' and not(ancestor::article or ancestor::aside or ancestor::main or ancestor::nav or ancestor::section)]'
+		. " | .//*[@role='banner' or @role='contentinfo']";
+
+	/**
+	 * Removes comments, the site header and footer (SITE_LANDMARKS) and the elements matching the
+	 * remove selectors from the content.
 	 *
 	 * @param   DOMXPath    $xpath      The document
 	 * @param   DOMElement  $content    The main content element
@@ -170,11 +183,14 @@ final class PageExtractor
 	 */
 	private static function removeNodes(DOMXPath $xpath, DOMElement $content, string $selectors): void
 	{
-		$remove   = [];
-		$comments = $xpath->query('.//comment()', $content);
+		$remove = [];
 
-		foreach ($comments === false ? [] : $comments as $node) {
-			$remove[] = $node;
+		foreach (['.//comment()', self::SITE_LANDMARKS] as $query) {
+			$nodes = $xpath->query($query, $content);
+
+			foreach ($nodes === false ? [] : $nodes as $node) {
+				$remove[] = $node;
+			}
 		}
 
 		foreach (Selector::toXPaths($selectors) as $path) {
