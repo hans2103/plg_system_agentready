@@ -6,7 +6,7 @@
 - 2026-11-07: closer to Cloudflare: `MarkdownHeaders` (strip list, 6 MiB limit, site `Content-Signal` wins), site header/footer landmarks removed (issue #3)
 
 Last updated: 2026-11-07
-Verified against: 29fab20
+Verified against: 21c74b4
 Covers:
 - Src/plugins/system/agentready/
 
