@@ -212,12 +212,25 @@ geen #__-tabelprefix gevonden"
         [ -z "$bad_prefix" ] || problems="$problems
 tabelnaam zonder #__-prefix (nooit de echte prefix gebruiken):
 $(printf '%s' "$bad_prefix" | sed 's/^/  /')"
+        # ALTER TABLE … ADD/DROP … IF [NOT] EXISTS: MySQL kent het niet (alleen MariaDB) en Joomla's
+        # databasecontrole leest dan 'IF' als kolom- of indexnaam. Gebruik /** CAN FAIL **/.
+        if_exists="$(grep -niE '(add|drop)[[:space:]]+(column|key|index|unique)[[:space:]]+if[[:space:]]+(not[[:space:]]+)?exists' "$f" | grep -vE '^[0-9]+:[[:space:]]*--' || true)"
+        [ -z "$if_exists" ] || problems="$problems
+IF [NOT] EXISTS in ALTER TABLE (MySQL kent het niet; Joomla meldt kolom 'IF'). Schrijf:
+  ALTER TABLE \`#__…\` ADD COLUMN \`naam\` … /** CAN FAIL **/;
+$(printf '%s' "$if_exists" | sed 's/^/  /')"
         if [ -n "$problems" ]; then
             error "2. SQL-migraties — $f"; list "$problems"; m_errors=$((m_errors + 1))
         fi
-        not_idempotent="$(grep -niE '^(create table|alter table .* add (column )?)' "$f" | grep -viE 'if not exists' || true)"
+        # Idempotent: CREATE TABLE IF NOT EXISTS, en elke ALTER TABLE … ADD/DROP als één regel met
+        # /** CAN FAIL **/ aan het eind (zo doet Joomla het zelf; run-migrations.sh draait die regel los).
+        not_idempotent="$( {
+            grep -niE '^[[:space:]]*create table' "$f" | grep -viE 'if not exists'
+            grep -niE '^[[:space:]]*alter table .*[[:space:]](add|drop)[[:space:]]' "$f" | grep -vF '/** CAN FAIL **/;'
+            grep -niE '^[[:space:]]*(add|drop)[[:space:]]' "$f"
+        } | sort -n -t: -k1,1 || true)"
         if [ -n "$not_idempotent" ]; then
-            warning "2. SQL-migraties — $f: niet idempotent (IF NOT EXISTS ontbreekt)"; list "$not_idempotent"
+            warning "2. SQL-migraties — $f: niet idempotent (CREATE TABLE IF NOT EXISTS; per ADD/DROP één regel ALTER TABLE … /** CAN FAIL **/;)"; list "$not_idempotent"
         fi
     done < <(printf '%s\n' "$SET")
     if [ "$m_count" -eq 0 ]; then ok "2. SQL-migraties — n.v.t., geen nieuwe/gewijzigde sql/migrations/*.sql"

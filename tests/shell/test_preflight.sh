@@ -45,6 +45,26 @@ expect "niet-idempotente migratie is alleen een WARNING" 0 pf --only 2
 has "  met melding" 'niet idempotent'
 rm -f "$mig/99_20260101_120000_niet_idempotent.sql"
 
+printf -- '-- Issue: #99\n-- Auteur: T\n-- Omschrijving: t\n\nALTER TABLE `#__%s_x` ADD COLUMN `y` INT /** CAN FAIL **/;\n' "$PROJECT_NAME" > "$mig/99_20260101_120000_can_fail.sql"
+expect "ALTER TABLE met CAN FAIL" 0 pf --only 2
+hasnt "  geen idempotentie-melding" 'niet idempotent'
+rm -f "$mig/99_20260101_120000_can_fail.sql"
+
+printf -- '-- Issue: #99\n-- Auteur: T\n-- Omschrijving: t\n\nALTER TABLE `#__%s_x` ADD COLUMN `y` INT;\n' "$PROJECT_NAME" > "$mig/99_20260101_120000_zonder_can_fail.sql"
+expect "ALTER TABLE zonder CAN FAIL is alleen een WARNING" 0 pf --only 2
+has "  met melding" 'niet idempotent'
+rm -f "$mig/99_20260101_120000_zonder_can_fail.sql"
+
+printf -- '-- Issue: #99\n-- Auteur: T\n-- Omschrijving: t\n\nALTER TABLE `#__%s_x`\n  ADD COLUMN `y` INT,\n  ADD COLUMN `z` INT /** CAN FAIL **/;\n' "$PROJECT_NAME" > "$mig/99_20260101_120000_meerregelig.sql"
+expect "ALTER TABLE over meerdere regels is een WARNING" 0 pf --only 2
+has "  noemt de ADD-regel" 'ADD COLUMN `y`'
+rm -f "$mig/99_20260101_120000_meerregelig.sql"
+
+printf -- '-- Issue: #99\n-- Auteur: T\n-- Omschrijving: t met ADD COLUMN IF NOT EXISTS in commentaar\n\nALTER TABLE `#__%s_x` ADD COLUMN IF NOT EXISTS `y` INT;\n' "$PROJECT_NAME" > "$mig/99_20260101_120000_if_not_exists.sql"
+expect "ADD COLUMN IF NOT EXISTS is een ERROR" 1 pf --only 2
+has "  met uitleg" 'CAN FAIL'
+rm -f "$mig/99_20260101_120000_if_not_exists.sql"
+
 # ── Controle 3: manifests ──
 first_manifest="${EXTENSION_MANIFESTS[0]}"
 touch "$tmp/copy/$(dirname "$first_manifest")/verdwaald.txt"

@@ -19,14 +19,18 @@ config() { # host  → configuration.php met de opgegeven host
 PHP
 }
 config db.local
-# Nep-mysql: logt argumenten, wachtwoord en SQL; faalt als de SQL het woord BOEM bevat.
+# Nep-mysql: logt argumenten, wachtwoord en SQL; faalt als de SQL het woord BOEM bevat, en met
+# 1060 (kolom bestaat al) als de SQL het woord DUBBEL bevat.
 cat > "$tmp/bin/mysql" <<'SH'
 #!/bin/bash
 echo "ARGS: $*" >> "$MYSQL_LOG"
 echo "PWD: ${MYSQL_PWD:-}" >> "$MYSQL_LOG"
 sql="$(cat)"
 printf '%s\n' "$sql" >> "$MYSQL_LOG"
-case "$sql" in *BOEM*) echo "ERROR 1064: syntax" >&2; exit 1 ;; esac
+case "$sql" in
+  *BOEM*) echo "ERROR 1064 (42000) at line 1: syntax" >&2; exit 1 ;;
+  *DUBBEL*) echo "ERROR 1060 (42S21) at line 1: Duplicate column name 'DUBBEL'" >&2; exit 1 ;;
+esac
 SH
 chmod +x "$tmp/bin/mysql"
 
@@ -77,6 +81,30 @@ has "  meldt de mislukte migratie" 'Migratie 100_20260902_090000_b.sql mislukt'
 has "  noemt de overgeslagen migratie" 'Overgeslagen.*'
 hasnl "  latere migratie c is niet uitgevoerd" "xyz_${PROJECT_NAME}_c"
 printf 'CREATE TABLE IF NOT EXISTS `#__%s_b` (id INT);\n' "$PROJECT_NAME" > "$mig/100_20260902_090000_b.sql"
+
+# /** CAN FAIL **/: de regel gaat los naar mysql; 'bestaat al' (1060) is geen fout, de rest loopt door.
+cf="$mig/101_20260902_100000_cf.sql"
+printf 'CREATE TABLE IF NOT EXISTS `#__%s_d` (id INT);\nALTER TABLE `#__%s_d` ADD COLUMN `DUBBEL` INT /** CAN FAIL **/;\nALTER TABLE `#__%s_d` ADD COLUMN `na` INT /** CAN FAIL **/;  \nUPDATE `#__%s_d` SET id = 1;\n' "$PROJECT_NAME" "$PROJECT_NAME" "$PROJECT_NAME" "$PROJECT_NAME" > "$cf"
+rm -f "$tmp/log"
+run mig_run; same "CAN FAIL met 'bestaat al' geeft exit 0" 0 "$rc"
+has "  meldt de overgeslagen regel" '101_20260902_100000_cf.sql ... OK \(1 CAN FAIL'
+hasl "  de regel na de CAN FAIL-regel draait" "ADD COLUMN \`na\`"
+hasl "  het UPDATE daarna draait" "UPDATE \`xyz_${PROJECT_NAME}_d\`"
+hasl "  latere migratie c draait" "xyz_${PROJECT_NAME}_c"
+log="$(cat "$tmp/log")"
+cr=$(printf '%s\n' "$log" | grep -n "CREATE TABLE IF NOT EXISTS \`xyz_${PROJECT_NAME}_d\`" | head -1 | cut -d: -f1)
+up=$(printf '%s\n' "$log" | grep -n "UPDATE \`xyz_${PROJECT_NAME}_d\`" | head -1 | cut -d: -f1)
+du=$(printf '%s\n' "$log" | grep -n 'ADD COLUMN `DUBBEL`' | head -1 | cut -d: -f1)
+if [ -n "$cr" ] && [ -n "$du" ] && [ -n "$up" ] && [ "$cr" -lt "$du" ] && [ "$du" -lt "$up" ]; then
+  pass "  volgorde binnen de migratie blijft (CREATE, CAN FAIL-regel, UPDATE)"
+else
+  bad "  volgorde binnen de migratie klopt niet (create=$cr canfail=$du update=$up)"
+fi
+# Een andere fout op een CAN FAIL-regel stopt de run wel.
+printf 'ALTER TABLE `#__%s_d` ADD COLUMN `BOEM` INT /** CAN FAIL **/;\n' "$PROJECT_NAME" > "$cf"; rm -f "$tmp/log"
+run mig_run; same "CAN FAIL met een andere fout geeft exit 1" 1 "$rc"
+has "  meldt de mislukte migratie" 'Migratie 101_20260902_100000_cf.sql mislukt'
+rm -f "$cf"
 
 # Joomla-pad: .dev-local (JOOMLA_DIR= en de oudere SITE=) wanneer de omgevingsvariabele ontbreekt
 unset "$envvar"
