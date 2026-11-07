@@ -38,9 +38,12 @@ preg_match_all("/params->get\('([a-z_]+)'/", $source, $used);
 check('every setting the class reads is in the manifest', array_values(array_diff(array_unique($used[1]), array_keys($fields))), []);
 check('every manifest setting is read by the class', array_values(array_diff(array_keys($fields), $used[1])), []);
 
-check('listens to onAfterRender at lowest priority', str_contains($source, "'onAfterRender'     => ['onAfterRender', Priority::MIN]"), true);
-check('listens to onAfterRoute at high priority', str_contains($source, "'onAfterRoute'      => ['onAfterRoute', Priority::HIGH]"), true);
-check('listens to onPageCacheGetKey', str_contains($source, "'onPageCacheGetKey' => 'onPageCacheGetKey'"), true);
+check('listens to onAfterRender at lowest priority', str_contains($source, "'onAfterRender'       => ['onAfterRender', Priority::MIN]"), true);
+check('listens to onAfterRoute at high priority', str_contains($source, "'onAfterRoute'        => ['onAfterRoute', Priority::HIGH]"), true);
+check('listens to onPageCacheGetKey', str_contains($source, "'onPageCacheGetKey'   => 'onPageCacheGetKey'"), true);
+check('listens to onBeforeCompileHead', str_contains($source, "'onBeforeCompileHead' => 'onBeforeCompileHead'"), true);
+check('ai-catalog Link header', str_contains($source, "LinkHeader::link(\$root . self::AI_CATALOG, 'ai-catalog', 'application/json')"), true);
+check('ai-catalog head link', str_contains($source, "addHeadLink(Uri::root(true) . '/' . self::AI_CATALOG, 'ai-catalog', 'rel', ['type' => 'application/json'])"), true);
 
 foreach (['en-GB', 'nl-NL'] as $tag) {
 	$ini = parse_ini_file(PLUGIN_DIR . "/language/$tag/plg_system_agentready.ini");

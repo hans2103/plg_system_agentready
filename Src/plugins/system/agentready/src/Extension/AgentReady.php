@@ -23,8 +23,10 @@ use HKweb\Plugin\System\AgentReady\Http\VaryHeader;
 use HKweb\Plugin\System\AgentReady\Markdown\MarkdownRenderer;
 use HKweb\Plugin\System\AgentReady\Negotiation\AcceptHeader;
 use Joomla\CMS\Application\CMSApplication;
+use Joomla\CMS\Document\HtmlDocument;
 use Joomla\CMS\Event\Application\AfterRenderEvent;
 use Joomla\CMS\Event\Application\AfterRouteEvent;
+use Joomla\CMS\Event\Application\BeforeCompileHeadEvent;
 use Joomla\CMS\Event\PageCache\GetKeyEvent;
 use Joomla\CMS\Log\Log;
 use Joomla\CMS\Plugin\CMSPlugin;
@@ -39,6 +41,8 @@ use Joomla\Event\SubscriberInterface;
  *   (layout as Cloudflare's Markdown for Agents), HTML stays the default.
  * - Link headers (RFC 8288) on HTML pages to llms.txt, the agent skills index, the sitemap and the
  *   Markdown version of the page, so agents can discover them.
+ * - The ARD manifest (.well-known/ai-catalog.json) as Link header and as <link rel="ai-catalog"> in
+ *   the HTML head.
  *
  * @since  __DEPLOY_VERSION__
  */
@@ -66,6 +70,13 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	public const CACHE_KEY = 'agentready:markdown';
 
 	/**
+	 * The Agentic Resource Discovery manifest, relative to the site root.
+	 *
+	 * @since  __DEPLOY_VERSION__
+	 */
+	public const AI_CATALOG = '.well-known/ai-catalog.json';
+
+	/**
 	 * Returns the events this plugin listens to. onAfterRoute runs before plg_system_cache serves
 	 * a cached page; onAfterRender runs last, after every plugin that still changes the body.
 	 *
@@ -76,9 +87,10 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	public static function getSubscribedEvents(): array
 	{
 		return [
-			'onAfterRoute'      => ['onAfterRoute', Priority::HIGH],
-			'onAfterRender'     => ['onAfterRender', Priority::MIN],
-			'onPageCacheGetKey' => 'onPageCacheGetKey',
+			'onAfterRoute'        => ['onAfterRoute', Priority::HIGH],
+			'onAfterRender'       => ['onAfterRender', Priority::MIN],
+			'onPageCacheGetKey'   => 'onPageCacheGetKey',
+			'onBeforeCompileHead' => 'onBeforeCompileHead',
 		];
 	}
 
@@ -110,6 +122,31 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 
 		if ((int) $this->params->get('vary_html', 1) === 1 || AcceptHeader::prefersMarkdown($this->acceptHeader($app))) {
 			$app->set('gzip', false);
+		}
+	}
+
+	/**
+	 * Puts <link rel="ai-catalog"> in the HTML head, the way the ARD discovery reads the manifest
+	 * from a page (the Link header alone is not enough for it).
+	 *
+	 * @param   BeforeCompileHeadEvent  $event  The event
+	 *
+	 * @return  void
+	 *
+	 * @since   __DEPLOY_VERSION__
+	 */
+	public function onBeforeCompileHead(BeforeCompileHeadEvent $event): void
+	{
+		$app = $this->getApplication();
+
+		if (!$app instanceof CMSApplication || !$app->isClient('site') || !$this->aiCatalogEnabled()) {
+			return;
+		}
+
+		$document = $app->getDocument();
+
+		if ($document instanceof HtmlDocument) {
+			$document->addHeadLink(Uri::root(true) . '/' . self::AI_CATALOG, 'ai-catalog', 'rel', ['type' => 'application/json']);
 		}
 	}
 
@@ -177,6 +214,20 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	}
 
 	/**
+	 * Whether the ARD manifest link is on and the manifest exists in the site root.
+	 *
+	 * @return  boolean
+	 *
+	 * @since   __DEPLOY_VERSION__
+	 */
+	private function aiCatalogEnabled(): bool
+	{
+		return (int) $this->params->get('link_headers', 1) === 1
+			&& (int) $this->params->get('link_ai_catalog', 1) === 1
+			&& is_file(JPATH_ROOT . '/' . self::AI_CATALOG);
+	}
+
+	/**
 	 * Adds the agent discovery links to the Link header, merged with links other plugins set:
 	 * llms.txt and the agent skills index (only when the file exists in the site root), the
 	 * sitemap (when its URL is set) and the Markdown version of this page.
@@ -198,6 +249,10 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 
 		if ((int) $this->params->get('link_agent_skills', 1) === 1 && is_file(JPATH_ROOT . '/.well-known/agent-skills/index.json')) {
 			$links[] = LinkHeader::link($root . '.well-known/agent-skills/index.json', 'describedby', 'application/json');
+		}
+
+		if ($this->aiCatalogEnabled()) {
+			$links[] = LinkHeader::link($root . self::AI_CATALOG, 'ai-catalog', 'application/json');
 		}
 
 		$sitemap = trim((string) $this->params->get('sitemap_url', ''));
