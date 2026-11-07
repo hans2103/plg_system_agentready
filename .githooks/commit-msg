@@ -1,0 +1,37 @@
+#!/bin/bash
+# commit-msg hook: controleert of elk commit-bericht een issue-nummer bevat.
+# Installeren: git config core.hooksPath .githooks
+#
+# Uitzonderingen (geen issue-nummer vereist):
+#   - Merge-commits
+#   - Release-commits (chore(release): ...)
+# Geen issue? Gebruik #000.
+
+COMMIT_MSG=$(cat "$1")
+
+# Sla merge-commits over
+if echo "$COMMIT_MSG" | grep -qE "^Merge "; then
+  exit 0
+fi
+
+# Sla release-commits over
+if echo "$COMMIT_MSG" | grep -qE "^chore\(release\)"; then
+  exit 0
+fi
+
+# Controleer op issuereferentie (#123)
+if ! echo "$COMMIT_MSG" | grep -qE '#[0-9]+'; then
+  echo ""
+  echo "⛔ Commit afgewezen: geen issue-nummer gevonden in het commit-bericht."
+  echo ""
+  echo "   Voeg het issue-nummer toe, bijvoorbeeld:"
+  echo "   feat: #36 omschrijving van de wijziging"
+  echo "   fix: #36 omschrijving van de bugfix"
+  echo "   Zonder issue? Gebruik #000."
+  echo ""
+  echo "   Wil je de check overslaan? Gebruik: git commit --no-verify"
+  echo ""
+  exit 1
+fi
+
+exit 0

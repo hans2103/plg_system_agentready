@@ -1,0 +1,53 @@
+# git-cliff configuratie voor Advent Calendar
+# Genereert release notes op basis van commit-berichten
+# Zie: https://git-cliff.org/docs/configuration
+
+[changelog]
+header = ""
+body = """
+{% for group, commits in commits | group_by(attribute="group") %}\
+### {{ group }}
+{% for commit in commits %}\
+- {{ commit.message | split(pat="\n") | first | trim }}
+{% endfor %}
+{% endfor %}\
+"""
+footer = ""
+trim = true
+postprocessors = []
+
+[git]
+conventional_commits = true
+filter_unconventional = false
+split_commits = false
+commit_parsers = [
+  # Sla merge-commits over
+  { message = "^Merge", skip = true },
+  # Sla versie-bumps over
+  { message = "^chore\\(release\\)", skip = true },
+
+  # Conventional commits
+  { message = "^feat", group = "Nieuw" },
+  { message = "^fix", group = "Bugfixes" },
+  { message = "^perf", group = "Verbeteringen" },
+  { message = "^refactor", group = "Refactoring" },
+  { message = "^docs", group = "Documentatie" },
+  { message = "^test", group = "Tests" },
+  { message = "^chore", group = "Onderhoud" },
+  { message = "^style", skip = true },
+  { message = "^ci", group = "Onderhoud" },
+
+  # Vrije commit-berichten met issuereferentie (#123 ...)
+  { message = "^#[0-9]+ [Bb]ug|[Ff]out|[Ff]ix|[Oo]pgelost", group = "Bugfixes" },
+  { message = "^#[0-9]+", group = "Overige wijzigingen" },
+
+  # Alles overige
+  { message = ".*", group = "Overige wijzigingen" },
+]
+protect_breaking_commits = false
+filter_commits = false
+tag_pattern = "v[0-9]*\\.[0-9]*\\.[0-9]*"
+skip_tags = ""
+ignore_tags = "undefined.*"
+topo_order = false
+sort_commits = "oldest"
