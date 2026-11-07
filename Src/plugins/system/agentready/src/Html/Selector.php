@@ -23,7 +23,7 @@ namespace HKweb\Plugin\System\AgentReady\Html;
  * (div.a#b[x]), the descendant (space) and child (>) combinators, and comma-separated lists.
  * A part with other syntax is skipped, so one typo in a setting does not disable the rest.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class Selector
 {
@@ -34,7 +34,7 @@ final class Selector
 	 *
 	 * @return  list<string>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function toXPaths(string $selectorList): array
 	{
@@ -58,7 +58,7 @@ final class Selector
 	 *
 	 * @return  string|null
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function toXPath(string $selectorList): ?string
 	{
@@ -74,7 +74,7 @@ final class Selector
 	 *
 	 * @return  list<string>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function splitList(string $list): array
 	{
@@ -113,7 +113,7 @@ final class Selector
 	 *
 	 * @return  string|null  Null when the selector uses unsupported syntax
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function selectorToXPath(string $selector): ?string
 	{
@@ -146,7 +146,7 @@ final class Selector
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function compoundToXPath(string $compound): string
 	{
@@ -177,7 +177,7 @@ final class Selector
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function literal(string $value): string
 	{

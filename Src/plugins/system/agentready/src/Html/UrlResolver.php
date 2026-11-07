@@ -19,7 +19,7 @@ namespace HKweb\Plugin\System\AgentReady\Html;
 /**
  * Resolves a reference against an absolute base URL (RFC 3986, section 5.2).
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class UrlResolver
 {
@@ -32,7 +32,7 @@ final class UrlResolver
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function resolve(string $base, string $reference): string
 	{
@@ -75,7 +75,7 @@ final class UrlResolver
 	 *
 	 * @return  array{0: string, 1: string}
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function splitSuffix(string $reference): array
 	{
@@ -91,7 +91,7 @@ final class UrlResolver
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function removeDotSegments(string $path): string
 	{

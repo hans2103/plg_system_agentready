@@ -24,7 +24,7 @@ use League\HTMLToMarkdown\HtmlConverter;
  * Builds the Markdown document in the layout of Cloudflare's Markdown for Agents: optional YAML
  * frontmatter, the converted body, and the JSON-LD in one fenced json block at the end.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final class MarkdownRenderer
 {
@@ -37,7 +37,7 @@ final class MarkdownRenderer
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function render(ExtractedPage $page, bool $frontmatter = true, bool $jsonLd = true): string
 	{
@@ -82,7 +82,7 @@ final class MarkdownRenderer
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function tidy(string $markdown): string
 	{
@@ -126,7 +126,7 @@ final class MarkdownRenderer
 	 *
 	 * @return  integer
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public static function estimateTokens(string $markdown): int
 	{
@@ -138,7 +138,7 @@ final class MarkdownRenderer
 	 *
 	 * @return  HtmlConverter
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	private static function converter(): HtmlConverter
 	{

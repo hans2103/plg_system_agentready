@@ -19,7 +19,7 @@ namespace HKweb\Plugin\System\AgentReady\Html;
 /**
  * What PageExtractor takes from an HTML page: metadata, the cleaned main content and JSON-LD.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 final readonly class ExtractedPage
 {
@@ -28,7 +28,7 @@ final readonly class ExtractedPage
 	 * @param   string                 $contentHtml  Inner HTML of the main content, cleaned
 	 * @param   list<string>           $jsonLd       Trimmed contents of each application/ld+json script
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public function __construct(
 		public array $meta,
