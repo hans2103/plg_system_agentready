@@ -5,7 +5,7 @@
 - 2026-11-07: update server is GitHub (`updates.xml` on main via raw.githubusercontent.com) instead of updates.hkweb.nl (issue #6)
 
 Last updated: 2026-11-07
-Verified against: 9af5c51
+Verified against: e0db324
 Covers:
 - package.xml
 - package_script.php
