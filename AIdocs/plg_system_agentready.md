@@ -4,9 +4,10 @@
 - 2026-11-07: page created with the first version: Markdown for Agents merged with the agent discovery Link headers of the gehandicaptenvalkenswaard.nl plugin (issue #1)
 - 2026-11-07: `tidy()` leaves one space after the `#` of a heading (issue #1)
 - 2026-11-07: closer to Cloudflare: `MarkdownHeaders` (strip list, 6 MiB limit, site `Content-Signal` wins), site header/footer landmarks removed (issue #3)
+- 2026-11-07: `link_ai_catalog`: the ARD manifest `.well-known/ai-catalog.json` (`AgentReady::AI_CATALOG`) as `rel="ai-catalog"` in the Link header and as `<link>` in the head (`onBeforeCompileHead`), when the file exists (issue #000)
 
 Last updated: 2026-11-07
-Verified against: 21c74b4
+Verified against: 292a195
 Covers:
 - Src/plugins/system/agentready/
 
@@ -15,7 +16,7 @@ Covers:
 A Joomla system plugin (group `system`, element `agentready`, namespace `HKweb\Plugin\System\AgentReady`) that makes a site readable for AI agents:
 
 1. **Markdown for Agents**: a request with `Accept: text/markdown` gets a Markdown version of the page, in the layout of Cloudflare's Markdown for Agents (frontmatter, body, JSON-LD).
-2. **Link headers** (RFC 8288) on HTML pages to `llms.txt`, the agent skills index, the sitemap and the Markdown alternate.
+2. **Link headers** (RFC 8288) on HTML pages to `llms.txt`, the agent skills index, the ARD manifest (`ai-catalog.json`, also as `<link>` in the head), the sitemap and the Markdown alternate.
 
 Design and reasoning: `docs/superpowers/specs/2026-11-07-agent-ready-design.md`.
 
@@ -44,6 +45,7 @@ Design and reasoning: `docs/superpowers/specs/2026-11-07-agent-ready-design.md`.
 | `onAfterRoute` | `HIGH` (before `plg_system_cache` serves a cached page) | Front end, Joomla gzip on, Markdown on, format html: switches Joomla's gzip off when `vary_html` is on or the request asks for Markdown. Reason: Joomla's `compress()` adds `Vary: Accept-Encoding` as a second value and `sendHeaders()` sends every value with `header(…, replace: true)`, so only the last value per name reaches the client. |
 | `onPageCacheGetKey` | normal | Front end, Markdown on, request prefers Markdown: adds `agentready:markdown` to the page cache key. The HTML key is unchanged. `plg_system_cache` stores headers too, so a cache hit has the right `Content-Type`. |
 | `onAfterRender` | `MIN` (after every plugin that changes the body) | See below. |
+| `onBeforeCompileHead` | normal | Front end, HTML document, `aiCatalogEnabled()` (`link_headers`, `link_ai_catalog`, `JPATH_ROOT/.well-known/ai-catalog.json` exists): `addHeadLink()` of `{root path}/.well-known/ai-catalog.json`, `rel="ai-catalog"`, `type="application/json"`. Not limited to status 200, unlike the Link header. |
 
 ### onAfterRender
 
@@ -68,6 +70,7 @@ Deliberate differences from Cloudflare: `<title>` fallback for the frontmatter t
 One `Link` header (`setHeader(…, true)`), merged with existing `Link` values by `LinkHeader::merge()` (same URI + rel once):
 - `<{root}llms.txt>; rel="describedby"; type="text/markdown"`: `link_llms` and `JPATH_ROOT/llms.txt` exists;
 - `<{root}.well-known/agent-skills/index.json>; rel="describedby"; type="application/json"`: `link_agent_skills` and the file exists;
+- `<{root}.well-known/ai-catalog.json>; rel="ai-catalog"; type="application/json"`: `aiCatalogEnabled()`;
 - `<{sitemap}>; rel="sitemap"; type="application/xml"`: `sitemap_url` set (relative → `Uri::root()` before it);
 - `<{page URL}>; rel="alternate"; type="text/markdown"`: Markdown on and `link_markdown`.
 
@@ -98,7 +101,7 @@ Layout: `---` frontmatter with JSON-encoded values (valid YAML), body, then ````
 | Fieldset | Name | Default |
 |---|---|---|
 | basic (Markdown) | `markdown`, `content_selector`, `remove_selectors`, `frontmatter`, `jsonld` | 1, `main, [role=main], article, body`, `AgentReady::DEFAULT_REMOVE_SELECTORS`, 1, 1 |
-| links | `link_headers`, `link_llms`, `link_agent_skills`, `sitemap_url`, `link_markdown` | 1, 1, 1, '', 1 |
+| links | `link_headers`, `link_llms`, `link_agent_skills`, `link_ai_catalog`, `sitemap_url`, `link_markdown` | 1, 1, 1, 1, '', 1 |
 | advanced | `skip_logged_in`, `skip_noindex`, `vary_html`, `content_signal` | 1, 1, 1, '' |
 
 The defaults of `content_selector` and `remove_selectors` exist twice (manifest and class constants); `PluginContractTest` keeps them equal.
