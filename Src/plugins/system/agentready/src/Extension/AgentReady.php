@@ -77,6 +77,14 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	public const AI_CATALOG = '.well-known/ai-catalog.json';
 
 	/**
+	 * The MCP Server Card (SEP-1649), relative to the site root.
+	 *
+	 * @var    string
+	 * @since  __DEPLOY_VERSION__
+	 */
+	public const MCP_SERVER_CARD = '.well-known/mcp/server-card.json';
+
+	/**
 	 * Returns the events this plugin listens to. onAfterRoute runs before plg_system_cache serves
 	 * a cached page; onAfterRender runs last, after every plugin that still changes the body.
 	 *
@@ -253,6 +261,10 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 
 		if ($this->aiCatalogEnabled()) {
 			$links[] = LinkHeader::link($root . self::AI_CATALOG, 'ai-catalog', 'application/json');
+		}
+
+		if ((int) $this->params->get('link_mcp_server_card', 1) === 1 && is_file(JPATH_ROOT . '/' . self::MCP_SERVER_CARD)) {
+			$links[] = LinkHeader::link($root . self::MCP_SERVER_CARD, 'describedby', 'application/json');
 		}
 
 		$sitemap = trim((string) $this->params->get('sitemap_url', ''));
