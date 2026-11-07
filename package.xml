@@ -23,6 +23,6 @@
 	</files>
 
 	<updateservers>
-		<server type="extension" name="Agent Ready Updates">https://updates.hkweb.nl/agentready/updates.xml</server>
+		<server type="extension" name="Agent Ready Updates">https://raw.githubusercontent.com/hans2103/plg_system_agentready/main/updates.xml</server>
 	</updateservers>
 </extension>
