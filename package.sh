@@ -49,7 +49,7 @@ if [ -n "${1:-}" ]; then
     sed -i.bak "s#__DEPLOY_VERSION__#${version}#g" "${deployVersionFile}"
     rm -f "${deployVersionFile}.bak"
     deployVersionCount=$((deployVersionCount + 1))
-  done < <(grep -rlI '__DEPLOY_VERSION__' "${srcDir}" "${baseDir}/package_script.php" || true)
+  done < <(grep -rlI '__DEPLOY_VERSION__' "${srcDir}" || true)
   [ "${deployVersionCount}" -eq 0 ] || echo "__DEPLOY_VERSION__ vervangen door ${version} in ${deployVersionCount} bestand(en)"
 else
   version=$(grep -m1 '<version>' "${baseDir}/package.xml" | sed -E 's#.*<version>([^<]+)</version>.*#\1#')

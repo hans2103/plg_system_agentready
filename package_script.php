@@ -23,7 +23,7 @@ use Joomla\Database\ParameterType;
 /**
  * Installation script for the Agent Ready package.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.45.0
  */
 class Pkg_AgentreadyInstallerScript
 {
@@ -31,7 +31,7 @@ class Pkg_AgentreadyInstallerScript
 	 * Minimum Joomla version required to install the package.
 	 *
 	 * @var    string
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	protected $minimumJoomla = '5.3.3';
 
@@ -39,7 +39,7 @@ class Pkg_AgentreadyInstallerScript
 	 * Minimum PHP version required to install the package.
 	 *
 	 * @var    string
-	 * @since  __DEPLOY_VERSION__
+	 * @since  26.45.0
 	 */
 	protected $minimumPhp = '8.3.0';
 
@@ -51,7 +51,7 @@ class Pkg_AgentreadyInstallerScript
 	 *
 	 * @return  boolean  True to continue
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public function preflight(string $type, InstallerAdapter $parent): bool
 	{
@@ -85,7 +85,7 @@ class Pkg_AgentreadyInstallerScript
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.45.0
 	 */
 	public function postflight(string $type, InstallerAdapter $parent): void
 	{
