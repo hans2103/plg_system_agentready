@@ -6,7 +6,7 @@
 - 2026-11-07: `package.sh` stamps `__DEPLOY_VERSION__` in `Src/` only (issue #10)
 
 Last updated: 2026-11-07
-Verified against: e0db324
+Verified against: 00ff79c
 Covers:
 - package.xml
 - package_script.php
