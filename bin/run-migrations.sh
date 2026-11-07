@@ -9,7 +9,10 @@
 # JOOMLA_DIR_DEFAULT in scripts.conf, anders wordt het gevraagd en in .dev-local opgeslagen.
 #
 # Migraties draaien in volgorde van hun tijdstempel (het datum- en tijddeel van de naam, niet
-# het issuenummer). Ze moeten idempotent zijn: dit script draait ze elke keer opnieuw. De
+# het issuenummer). Ze moeten idempotent zijn: dit script draait ze elke keer opnieuw. Een regel
+# die eindigt op `/** CAN FAIL **/;` (één ALTER TABLE … ADD/DROP, zoals Joomla's eigen updates) gaat
+# los naar mysql; meldt die alleen dat de kolom of index al bestaat of al weg is (1060, 1061, 1091),
+# dan gaat de migratie door. Elke andere fout stopt de run. De
 # bestanden blijven in sql/migrations/ staan; package.sh verplaatst ze bij een release naar
 # sql/migrations/applied/.
 #
@@ -100,6 +103,35 @@ run_sql() {
     fi
 }
 
+# Voert één migratie (stdin, prefix al vervangen) uit. Regels met /** CAN FAIL **/; gaan los; de
+# rest in blokken ertussen, in volgorde. Zet canFailSkipped; stderr van de fout staat in errFile.
+canFailMarker='/** CAN FAIL **/;'
+run_migration() {
+    local line batch="" hasSql=0
+    canFailSkipped=0
+    flush_batch() {
+        if [ "${hasSql}" -eq 1 ]; then
+            printf '%s' "${batch}" | run_sql 2>"${errFile}" || return 1
+        fi
+        batch=""; hasSql=0
+    }
+    while IFS= read -r line || [ -n "${line}" ]; do
+        local trimmed="${line%"${line##*[![:space:]]}"}"
+        if [ "${trimmed%"${canFailMarker}"}" != "${trimmed}" ]; then
+            flush_batch || return 1
+            if ! printf '%s\n' "${line}" | run_sql 2>"${errFile}"; then
+                grep -qE 'ERROR (1060|1061|1091)' "${errFile}" || return 1
+                canFailSkipped=$((canFailSkipped + 1))
+            fi
+            continue
+        fi
+        batch="${batch}${line}
+"
+        case "${line}" in ''|--*|[[:space:]]--*) : ;; *[![:space:]]*) hasSql=1 ;; esac
+    done
+    flush_batch
+}
+
 # Namen (zonder pad) in tijdstempelvolgorde: {issue}_{JJJJMMDD}_{UUMMSS}_… -> sorteer op veld 2 en 3.
 pendingNames=$(find "${migrationsDir}" -maxdepth 1 -name "*.sql" -exec basename {} \; | sort -t_ -k2,3)
 if [ -z "${pendingNames}" ]; then
@@ -141,8 +173,12 @@ while IFS= read -r migrationName; do
         continue
     fi
     echo -n "  ${migrationName} ... "
-    if sed "s/#__/${dbPrefix}/g" "${migrationsDir}/${migrationName}" | run_sql 2>"${errFile}"; then
-        echo "OK"
+    if run_migration < <(sed "s/#__/${dbPrefix}/g" "${migrationsDir}/${migrationName}"); then
+        if [ "${canFailSkipped}" -gt 0 ]; then
+            echo "OK (${canFailSkipped} CAN FAIL-regel(s) overgeslagen: bestond al of was al weg)"
+        else
+            echo "OK"
+        fi
     else
         echo "MISLUKT"
         tail -n 3 "${errFile}" | sed 's/^/    /'
