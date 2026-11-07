@@ -83,7 +83,7 @@ Do **not** add a 'Generated with Claude Code' line in a PR.
 
 Calendar versioning `YY.WW.PATCH` (e.g. `26.45.0`). The single source of truth is `<version>` in `package.xml`; `package.sh {version}` stamps it into the plugin manifest and replaces `__DEPLOY_VERSION__`.
 
-- `bash bin/run-release.sh` runs the release. The tag `v{version}` triggers `.github/workflows/release.yml`: GitHub Release with git-cliff notes, `updates.xml` on main, then the zip and `updates.xml` to `https://updates.hkweb.nl/agentready/` (needs secret `UPDATES_SSH_KEY` and variable `UPDATES_SSH_HOST`; without them the step is skipped).
+- `bash bin/run-release.sh` runs the release. The tag `v{version}` triggers `.github/workflows/release.yml`: GitHub Release with git-cliff notes, then `updates.xml` on main. GitHub is the update server: `package.xml` points to `https://raw.githubusercontent.com/hans2103/plg_system_agentready/main/updates.xml` and the zip downloads from the GitHub Release (`UPDATE_DOWNLOAD_BASE` empty). No own server, no secrets.
 - Public extension: no download key (`dlid`).
 - Details: `docs/Release en deployment procedure.md`.
 

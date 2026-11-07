@@ -84,7 +84,8 @@ jobs:
         if: ${{ !env.LOCAL_ACT }}
         run: |
           VERSION="${{ steps.get_version.outputs.version }}"
-          # De checksum (sha512) is van precies de zip die naar de GitHub Release en de update-server gaat (issue #257).
+          # De checksum (sha512) is van precies de zip in de GitHub Release (issue #257). Joomla leest
+          # updates.xml van main (raw.githubusercontent.com) en downloadt de zip uit de GitHub Release.
           php bin/add-update-entry.php "$VERSION" --zip="packages/${VERSION}/pkg_agentready-${VERSION}.zip"
 
           git config user.name "github-actions[bot]"
@@ -111,42 +112,3 @@ jobs:
           done
           echo "Error: kon updates.xml niet naar main pushen na 5 pogingen"
           exit 1
-
-      # Zet de zip en updates.xml op de update server (https://updates.hkweb.nl/agentready/, web03),
-      # zodat Joomla's updatebeheer de update kan vinden en, met een download-sleutel, ophalen. De
-      # sleutel mag daar alleen schrijven in de eigen webroot (rrsync -wo). updates.hkweb.nl staat achter
-      # de Cloudflare-proxy, die geen SSH doorlaat: UPDATES_SSH_HOST is daarom het origin-IP van web03.
-      # Ontbreekt de secret of de variabele, dan slaat deze stap zichzelf over; de release is er dan al.
-      - name: Publiceer op updates.hkweb.nl
-        if: ${{ !env.LOCAL_ACT }}
-        env:
-          SSH_KEY: ${{ secrets.UPDATES_SSH_KEY }}
-          SSH_HOST: ${{ vars.UPDATES_SSH_HOST }}
-        run: |
-          if [ -z "$SSH_KEY" ] || [ -z "$SSH_HOST" ]; then
-            echo "::warning::UPDATES_SSH_KEY of UPDATES_SSH_HOST ontbreekt: niet gepubliceerd op updates.hkweb.nl"
-            exit 0
-          fi
-
-          VERSION="${{ steps.get_version.outputs.version }}"
-          PACKAGE_FILE="packages/${VERSION}/pkg_agentready-${VERSION}.zip"
-          if [ ! -f "$PACKAGE_FILE" ] || [ ! -f updates.xml ]; then
-            echo "Error: $PACKAGE_FILE of updates.xml ontbreekt"
-            exit 1
-          fi
-
-          install -d -m 700 ~/.ssh
-          ( umask 077; printf '%s\n' "$SSH_KEY" > ~/.ssh/updates )
-          # Host key van web03 vastgezet: een andere server op dit adres wordt geweigerd.
-          echo "${SSH_HOST} ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIG4eCFR8IgAXwSJoWXMY8V1jclgrjraWI0RkP50/G9Do" > ~/.ssh/known_hosts_updates
-          SSH="ssh -i $HOME/.ssh/updates -o IdentitiesOnly=yes -o UserKnownHostsFile=$HOME/.ssh/known_hosts_updates -o StrictHostKeyChecking=yes"
-
-          # Eerst de zip, dan updates.xml: updates.xml wijst zo nooit naar een zip die er nog niet staat.
-          # Doelpad is './', niet 'agentready/': de deploy-sleutel is met rrsync beperkt tot de map
-          # van deze extensie, en rrsync chdirt daarheen. Met 'agentready/' zou het in
-          # .../agentready/agentready/ belanden.
-          rsync -rtp --chmod=D755,F644 -e "$SSH" "$PACKAGE_FILE" "updates-hkweb@${SSH_HOST}:./"
-          rsync -rtp --chmod=D755,F644 -e "$SSH" updates.xml "updates-hkweb@${SSH_HOST}:./updates.xml"
-          rm -f ~/.ssh/updates
-
-          echo "Gepubliceerd: https://updates.hkweb.nl/agentready/updates.xml en pkg_agentready-${VERSION}.zip"

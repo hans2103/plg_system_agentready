@@ -2,9 +2,10 @@
 
 ### History
 - 2026-11-07: page created with the first version (issue #1)
+- 2026-11-07: update server is GitHub (`updates.xml` on main via raw.githubusercontent.com) instead of updates.hkweb.nl (issue #6)
 
 Last updated: 2026-11-07
-Verified against: 9af5c51
+Verified against: e0db324
 Covers:
 - package.xml
 - package_script.php
@@ -20,7 +21,7 @@ Covers:
 - `<version>` is the single source of truth for the version (calendar versioning `YY.WW.PATCH`); `package.sh {version}` stamps it, with `<creationDate>`, into `package.xml` and `Src/plugins/system/agentready/agentready.xml`.
 - `<files>`: one entry, `plg_system_agentready.zip` (type plugin, group system, id agentready).
 - `<languages folder="language">`: `pkg_agentready.sys.ini` for en-GB and nl-NL; Joomla installs them in the site's global `language/` folders.
-- `<updateservers>`: `https://updates.hkweb.nl/agentready/updates.xml`. No `<dlid>`: the extension is public.
+- `<updateservers>`: `https://raw.githubusercontent.com/hans2103/plg_system_agentready/main/updates.xml` (GitHub as the update server, like the other public `plg_` repos; the zip downloads from the GitHub Release). No `<dlid>`: the extension is public.
 
 ## package_script.php
 

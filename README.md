@@ -47,7 +47,7 @@ There is nothing else to install: the HTML-to-Markdown library is included in th
 2. In the Joomla administrator, go to *System → Install → Extensions* and upload the zip.
 3. Done. The plugin (*System - Agent Ready*) is enabled on a first install and works with its default settings.
 
-Updates appear in Joomla's own update manager (*System → Update → Extensions*), from `https://updates.hkweb.nl/agentready/updates.xml`.
+Updates appear in Joomla's own update manager (*System → Update → Extensions*). The update list lives in this repository ([`updates.xml`](updates.xml)) and the downloads come from the GitHub releases.
 
 ## Check that it works
 
