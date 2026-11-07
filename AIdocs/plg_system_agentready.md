@@ -2,9 +2,10 @@
 
 ### History
 - 2026-11-07: page created with the first version: Markdown for Agents merged with the agent discovery Link headers of the gehandicaptenvalkenswaard.nl plugin (issue #1)
+- 2026-11-07: `tidy()` leaves one space after the `#` of a heading (issue #1)
 
 Last updated: 2026-11-07
-Verified against: 9af5c51
+Verified against: 29fab20
 Covers:
 - Src/plugins/system/agentready/
 
@@ -84,7 +85,7 @@ One `Link` header (`setHeader(…, true)`), merged with existing `Link` values b
 
 ## Rendering
 
-`MarkdownRenderer::render()`: league `HtmlConverter` with `header_style` atx, `strip_tags`, `remove_nodes` script/style/noscript/template, `strip_placeholder_links`, `hard_break` false (a `<br>` becomes two spaces + newline), `list_item_style` `-`, plus `TableConverter`. Then `tidy()` outside fenced code: whitespace-only lines emptied, 1–3 leading spaces and trailing spaces removed (two trailing spaces after text kept), runs of blank lines collapsed, HTML entities decoded except `&lt;`/`&gt;`. Empty body → `''`.
+`MarkdownRenderer::render()`: league `HtmlConverter` with `header_style` atx, `strip_tags`, `remove_nodes` script/style/noscript/template, `strip_placeholder_links`, `hard_break` false (a `<br>` becomes two spaces + newline), `list_item_style` `-`, plus `TableConverter`. Then `tidy()` outside fenced code: whitespace-only lines emptied, 1–3 leading spaces, extra spaces after a heading's `#` and trailing spaces removed (two trailing spaces after text kept), runs of blank lines collapsed, HTML entities decoded except `&lt;`/`&gt;`. Empty body → `''`.
 
 Layout: `---` frontmatter with JSON-encoded values (valid YAML), body, then ```` ```json ```` with each JSON-LD block on its own line; parts separated by a blank line, one trailing newline. `estimateTokens()` = ceil(characters / 4).
 
