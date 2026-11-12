@@ -87,6 +87,20 @@ if [ "${#VERSIONED_JSON[@]}" -gt 0 ]; then
   reset_copy "$tmp/copy"
 fi
 
+# ── Controle 8: package-lekkage en BUILT_DIRS ──
+# Een genegeerd bestand onder SRC_DIR komt in de ZIP: lekkage, tenzij het in een BUILT_DIRS-map
+# staat (gebouwd door de build, bewust niet in git maar wel in de package).
+printf '/%s/gebouwd/\n' "$SRC_DIR" >> "$tmp/copy/.gitignore"
+mkdir -p "$tmp/copy/$SRC_DIR/gebouwd"
+echo x > "$tmp/copy/$SRC_DIR/gebouwd/lek.php"
+expect "genegeerd bestand onder $SRC_DIR is een WARNING" 0 pf --only 8
+has "  benoemt het bestand" "$SRC_DIR/gebouwd/lek\.php"
+printf '\nBUILT_DIRS=("%s/gebouwd")\n' "$SRC_DIR" >> "$tmp/copy/scripts.conf"
+expect "genegeerd bestand in een BUILT_DIRS-map" 0 pf --only 8
+hasnt "  geen lekkage gemeld" 'gebouwd/lek'
+rm -rf "$tmp/copy/$SRC_DIR/gebouwd"
+reset_copy "$tmp/copy"
+
 # ── Hygiëne (6, 9, 10, 11): alleen de changeset, tenzij --all ──
 printf '<?php\nvar_dump($x);\n' > "$tmp/copy/Src/debug.php"
 expect "debug-rest is een WARNING, geen ERROR" 0 pf --only 6
