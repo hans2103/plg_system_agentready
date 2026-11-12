@@ -251,9 +251,11 @@ ongeldige XML: $f"
         done < <({ printf '%s\n' package.xml "$UPDATES_XML"; git ls-files --cached --others --exclude-standard -- "$SRC_DIR" | grep '\.xml$' | grep -vE '(^|/)vendor/'; } | sort -u)
         [ -z "$xml_bad" ] || { error "3. Manifests — XML"; list "$xml_bad"; }
     fi
+    built_args=()
+    for d in "${BUILT_DIRS[@]}"; do [ -n "$d" ] && built_args+=("--built=$d"); done
     if [ "${#EXTENSION_MANIFESTS[@]}" -eq 0 ]; then
         ok "3. Manifests — n.v.t., geen EXTENSION_MANIFESTS in scripts.conf"
-    elif manifest_out="$("$PHP_BIN" bin/check-manifests.php --src="$SRC_DIR" "${EXTENSION_MANIFESTS[@]}" 2>&1)"; then
+    elif manifest_out="$("$PHP_BIN" bin/check-manifests.php --src="$SRC_DIR" ${built_args[@]+"${built_args[@]}"} "${EXTENSION_MANIFESTS[@]}" 2>&1)"; then
         [ -n "$xml_bad" ] || ok "3. Manifests — XML geldig en manifests komen overeen met de schijf"
     else
         error "3. Manifests — manifest en schijf lopen uiteen"; list "$manifest_out"
@@ -330,6 +332,7 @@ fi
 #         belandt in de ZIP;
 #      b. een gevolgd bestand onder Src/ dat wel door een patroon wordt uitgesloten (CLAUDE.md-
 #         verwijzingen zijn bewust uitgesloten en tellen niet mee) komt juist niet in de ZIP.
+#    Een map uit BUILT_DIRS (scripts.conf) is genegeerd en hoort wél in de ZIP: geen lekkage.
 if should_run 8; then
     if [ ! -f .deployignore ]; then
         warning "8. Package-lekkage — .deployignore ontbreekt"
@@ -350,9 +353,19 @@ if should_run 8; then
             return 1
         }
 
+        is_built() {
+            local d
+            for d in "${BUILT_DIRS[@]}"; do
+                [ -n "$d" ] || continue
+                case "$1" in "${d%/}"/*) return 0 ;; esac
+            done
+            return 1
+        }
+
         leaks=""; lost=""
         while IFS= read -r f; do
             [ -n "$f" ] || continue
+            is_built "$f" && continue
             is_excluded "$f" || leaks="$leaks
 $f"
         done < <(git ls-files --others --ignored --exclude-standard -- "$SRC_DIR" 2>/dev/null || true)

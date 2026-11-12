@@ -10,6 +10,11 @@ failed=0
 # shellcheck disable=SC1091
 . "$repo/scripts.conf"
 : "${SRC_DIR:=Src}"   # dezelfde default als bin/_common.sh
+[ "${BUILT_DIRS+x}" ] || BUILT_DIRS=()
+# --built=-argumenten voor bin/check-manifests.php, zoals preflight ze uit BUILT_DIRS maakt.
+built_args=()
+for _d in "${BUILT_DIRS[@]}"; do [ -n "$_d" ] && built_args+=("--built=$_d"); done
+unset _d
 
 pass() { echo "ok:   $1"; }
 bad()  { echo "FAIL: $1"; failed=1; }
