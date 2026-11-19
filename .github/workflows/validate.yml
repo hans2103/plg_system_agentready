@@ -6,12 +6,20 @@ on:
       - main
       - develop
   pull_request:
+    # Draft-PR's draaien pas zodra ze ready for review zijn; lokaal draait bin/ci-local.sh dezelfde controles.
+    types: [opened, synchronize, reopened, ready_for_review]
     branches:
       - main
       - develop
 
+# Een nieuwe push op dezelfde PR breekt de vorige run af.
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
     runs-on: ubuntu-latest
 
     strategy:
