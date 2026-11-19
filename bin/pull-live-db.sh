@@ -14,6 +14,14 @@
 # git-repo, dan moet backup/ daar genegeerd worden (de dump bevat klantgegevens). Na de import
 # verdwijnt administrator/cache/autoload_psr4.php, zodat Joomla zijn PSR-4-map opnieuw maakt.
 #
+# Na de import neemt het script $secret over uit de live configuration.php (een tweede ssh-
+# aanroep), zodat de 2FA-gegevens uit #__user_mfa, die Joomla met $secret versleutelt, lokaal te
+# ontsleutelen zijn. Alleen een waarde van letters en cijfers wordt overgenomen, en alleen als die
+# afwijkt; de oude lokale configuration.php komt dan eerst als
+# configuration-before-secret-<stempel>.php in backup/. Is de live-waarde niet uit te lezen, dan
+# blijft het lokale bestand ongewijzigd en volgt een waarschuwing. 2FA die je na een eerdere
+# import lokaal opnieuw hebt ingesteld, werkt daarna niet meer en moet nog één keer opnieuw.
+#
 # Dumps bevatten persoonsgegevens: backup/ en de dumps zijn alleen leesbaar voor de eigenaar
 # (umask 077, chmod 600), en per soort blijven alleen de nieuwste --keep dumps staan.
 #
@@ -84,8 +92,11 @@ chmod 700 "${backupDir}"
 
 info "==> Live-database dumpen van ${LIVE_SSH_HOST}..."
 # Een mislukte dump laat toch een gzip-header achter: bij elke fout het bestand weghalen.
+# shellcheck disable=SC2154 # rc wordt in de trap zelf gezet
 trap 'rc=$?; [ "$rc" -eq 0 ] && [ -s "${liveDump}" ] || rm -f "${liveDump}"' EXIT
-ssh "${LIVE_SSH_HOST}" bash -s -- "${LIVE_JOOMLA_DIR}" <<'REMOTE' > "${liveDump}"
+# Remote: zoek de map met configuration.php en ga erheen. Gedeeld door de dump en het uitlezen
+# van $secret, zodat beide dezelfde live-site gebruiken. Een tweede argument maakt hem stil.
+remoteCdJoomla="$(cat <<'REMOTE'
 set -euo pipefail
 dir="${1:-}"
 if [ ! -f "$dir/configuration.php" ]; then
@@ -97,9 +108,12 @@ if [ ! -f "$dir/configuration.php" ]; then
         exit 1
     fi
     dir="$(dirname "${found[0]}")"
-    echo "    Live Joomla-map: $dir" >&2
+    [ -n "${2:-}" ] || echo "    Live Joomla-map: $dir" >&2
 fi
 cd "$dir"
+REMOTE
+)"
+{ printf '%s\n' "${remoteCdJoomla}"; cat <<'REMOTE'; } | ssh "${LIVE_SSH_HOST}" bash -s -- "${LIVE_JOOMLA_DIR}" > "${liveDump}"
 # Eén waarde per regel, zodat een wachtwoord met spaties heel blijft.
 { read -r DB; read -r USER; read -r PASS; read -r HOST; } < <(php -r 'define("_JEXEC", 1); require "configuration.php"; $c = new JConfig; echo "$c->db\n$c->user\n$c->password\n$c->host\n";')
 # Joomla staat "host:poort" en "host:/pad/naar.sock" toe; mariadb-dump wil die apart.
@@ -131,13 +145,44 @@ info "==> Importeren in DDEV..."
 
 if [ "${anonymize}" -eq 1 ]; then
     info "==> Persoonsgegevens anonimiseren..."
+    # shellcheck disable=SC2016 # PHP-code: $argv hoort niet door bash uitgebreid te worden
     prefix="$("${PHP_BIN}" -r 'error_reporting(0); require $argv[1]; echo (new JConfig())->dbprefix ?? "";' "${JOOMLA_DIR}/configuration.php")"
     [[ "${prefix}" =~ ^[A-Za-z0-9_]+$ ]] || die "dbprefix '${prefix}' uit configuration.php is ongeldig; niets geanonimiseerd."
     {
+        # shellcheck disable=SC2016 # backticks zijn SQL-quotes, geen command substitution
         printf 'UPDATE `%susers` SET `email` = CONCAT('"'"'user'"'"', `id`, '"'"'@example.invalid'"'"');\n' "${prefix}"
         [ -z "${anonymizeFile}" ] || sed "s/#__/${prefix}/g" "${anonymizeFile}"
     } | ( cd "${ddevProjectDir}" && ddev mysql )
     success "    E-mailadressen van gebruikers vervangen${anonymizeFile:+ en ${ANONYMIZE_SQL} uitgevoerd}."
+fi
+
+# Joomla versleutelt de 2FA-gegevens (#__user_mfa) met $secret uit configuration.php. Met een
+# andere lokale $secret zijn die niet te ontsleutelen en moet je 2FA bij elke login opnieuw
+# instellen; daarom neemt het script de live-waarde over.
+info "==> \$secret van live overnemen..."
+liveSecret="$(printf '%s\n%s\n' "${remoteCdJoomla}" \
+    'php -r '"'"'define("_JEXEC", 1); require "configuration.php"; echo (new JConfig)->secret ?? "";'"'"'' \
+    | ssh "${LIVE_SSH_HOST}" bash -s -- "${LIVE_JOOMLA_DIR}" stil)" || liveSecret=""
+localConfig="${JOOMLA_DIR}/configuration.php"
+# shellcheck disable=SC2016 # PHP-code: $argv hoort niet door bash uitgebreid te worden
+readLocalSecret() { "${PHP_BIN}" -r 'error_reporting(0); require $argv[1]; echo (new JConfig())->secret ?? "";' "${localConfig}" 2>/dev/null || true; }
+localSecret="$(readLocalSecret)"
+if [[ ! "${liveSecret}" =~ ^[A-Za-z0-9]+$ ]]; then
+    notice "    Waarschuwing: \$secret van live niet uit te lezen; lokale configuration.php niet aangepast. 2FA werkt lokaal mogelijk niet."
+elif [ "${liveSecret}" = "${localSecret}" ]; then
+    success "    \$secret is al gelijk aan live."
+else
+    configBackup="${backupDir}/configuration-before-secret-${stamp}.php"
+    cp -p "${localConfig}" "${configBackup}"
+    chmod 600 "${configBackup}"
+    sed -i.tmp -E "s/^([[:space:]]*public[[:space:]]+\\\$secret[[:space:]]*=[[:space:]]*)'[^']*'/\\1'${liveSecret}'/" "${localConfig}"
+    rm -f "${localConfig}.tmp"
+    if [ "$(readLocalSecret)" = "${liveSecret}" ]; then
+        success "    \$secret aangepast naar de live-waarde (back-up: ${configBackup})."
+    else
+        cp -p "${configBackup}" "${localConfig}"
+        notice "    Waarschuwing: \$secret niet aan te passen in ${localConfig}; bestand teruggezet. 2FA werkt lokaal mogelijk niet."
+    fi
 fi
 
 # Per soort alleen de nieuwste ${keep} dumps bewaren.

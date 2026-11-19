@@ -65,6 +65,28 @@ copy_repo() {
   ( cd "$1" && git add -A && git commit -q -m init )
 }
 
+# Kleine repo voor bin/ci-local.sh, de pre-push hook en de Claude-guard (#643): alleen die scripts
+# en een scripts.conf zonder composer/pnpm/integratie. De enige controle is CI_EXTRA_COMMANDS: die
+# faalt zodra .ci-fail bestaat.
+ci_repo() { # map
+  mkdir -p "$1/bin" "$1/.githooks"
+  cp "$repo/bin/_common.sh" "$repo/bin/ci-local.sh" "$repo/bin/claude-pr-guard.sh" "$repo/bin/claude-pr-guard.php" "$1/bin/"
+  cp "$repo/.githooks/pre-push" "$1/.githooks/"
+  cat > "$1/scripts.conf" <<'CONF'
+PROJECT_NAME="t"
+PACKAGE_ELEMENT="pkg_t"
+ENV_PREFIX="T"
+GITHUB_REPO="o/t"
+CI_COMPOSER_SCRIPTS=()
+CI_PNPM_SCRIPTS=()
+CI_FULL_COMPOSER_SCRIPTS=()
+CI_EXTRA_COMMANDS=('test ! -f .ci-fail')
+CI_INTEGRATION_SCRIPT=""
+CONF
+  git_init "$1"
+  ( cd "$1" && git add -A && git commit -q -m init )
+}
+
 # Zet een kopie terug naar zijn commit (gewijzigde bestanden terug, nieuwe bestanden weg).
 reset_copy() { ( cd "$1" && git checkout -q -- . && git clean -fdq ); }
 

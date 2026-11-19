@@ -18,7 +18,7 @@
 #    2 SQL-migraties (ERROR + WARNING)        9 Merge-conflictmarkers (ERROR)
 #    3 Manifests: XML + dekking (ERROR)      10 Hardgecodeerde home-paden (WARNING)
 #    4 Versies gelijk (ERROR)                11 Geheimen (WARNING)
-#    5 Commit-msg hook actief (WARNING)      12 AIdocs-dekking van de changeset (flavour ronny)
+#    5 Git-hooks actief (WARNING)            12 AIdocs-dekking van de changeset (flavour ronny)
 #    6 Debug-resten (WARNING)                13 Ronny (flavour ronny)
 #    7 Lengtegrenzen (scripts.conf)          14 AIdocs-structuur en -dekking (flavour structure)
 #                                            15 strict_types in PHP-klassebestanden (WARNING)
@@ -291,11 +291,23 @@ $f: versie '$v', package.xml heeft '$v_pkg'"
     else ok "4. Versies — package.xml en $((v_count - 1)) manifest(s)/JSON-bestand(en) staan alle op $v_pkg"; fi
 fi
 
-# 5. COMMIT-MSG HOOK (WARNING)
+# 5. GIT-HOOKS (WARNING): core.hooksPath wijst naar .githooks (commit-msg, pre-push) en elke hook
+#    daar is uitvoerbaar; een hook zonder x-bit slaat git stil over.
 if should_run 5; then
     hooks_path="$(git config --get core.hooksPath 2>/dev/null || true)"
-    if [ "$hooks_path" = ".githooks" ]; then ok "5. Commit-msg hook — core.hooksPath is .githooks"
-    else warning "5. Commit-msg hook — core.hooksPath is '${hooks_path:-<niet gezet>}'; draai: git config core.hooksPath .githooks"; fi
+    if [ "$hooks_path" != ".githooks" ]; then
+        warning "5. Git-hooks — core.hooksPath is '${hooks_path:-<niet gezet>}'; draai: git config core.hooksPath .githooks"
+    else
+        not_exec=""; hook_names=""
+        for h in .githooks/*; do
+            [ -f "$h" ] || continue
+            hook_names="$hook_names $(basename "$h")"
+            [ -x "$h" ] || not_exec="$not_exec
+$h"
+        done
+        if [ -n "$not_exec" ]; then warning "5. Git-hooks — niet uitvoerbaar (git slaat ze over; chmod +x):"; list "$not_exec"
+        else ok "5. Git-hooks — core.hooksPath is .githooks (${hook_names# })"; fi
+    fi
 fi
 
 # 6. DEBUG-RESTEN (WARNING)
