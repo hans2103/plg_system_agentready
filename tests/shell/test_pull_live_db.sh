@@ -15,10 +15,11 @@ git_init "$copy"
 
 # De "live"-site: alleen een configuration.php.
 mkdir -p "$tmp/live"
-writeLiveConfig() { # host wachtwoord
+writeLiveConfig() { # host wachtwoord [secret]
   cat > "$tmp/live/configuration.php" <<PHP
 <?php
 class JConfig {
+    public \$secret = '${3:-}';
     public \$host = '$1';
     public \$user = 'liveuser';
     public \$password = '$2';
@@ -30,7 +31,10 @@ writeLiveConfig 'db.internal:3307' 'geheim met spatie'
 
 # De lokale DDEV-site: public_html met configuration.php, .ddev/ ernaast.
 site="$tmp/site"; mkdir -p "$site/public_html" "$site/.ddev"
-printf '<?php\nclass JConfig {\n    public $dbprefix = %s;\n}\n' "'tst_'" > "$site/public_html/configuration.php"
+writeLocalConfig() { # secret
+  printf '<?php\nclass JConfig {\n\tpublic $secret = %s;\n    public $dbprefix = %s;\n}\n' "'$1'" "'tst_'" > "$site/public_html/configuration.php"
+}
+writeLocalConfig 'lokaalGeheim'
 echo 'name: testsite' > "$site/.ddev/config.yaml"
 mkdir -p "$site/public_html/administrator/cache"
 echo '<?php return [];' > "$site/public_html/administrator/cache/autoload_psr4.php"
@@ -184,5 +188,30 @@ rm -rf "$site/backup"; pull --no-backup --anonymize
 [ "$rc" -ne 0 ] && pass "ontbrekend ANONYMIZE_SQL-bestand geeft een fout" || bad "ontbrekend ANONYMIZE_SQL-bestand gaf exit 0"
 has "  noemt het bestand" 'bestaat-niet.sql'
 grep -v '^ANONYMIZE_SQL=' "$copy/scripts.conf" > "$tmp/conf.tmp" && cp "$tmp/conf.tmp" "$copy/scripts.conf"
+
+# $secret: live-waarde overnemen, zodat 2FA (#__user_mfa, versleuteld met $secret) lokaal werkt.
+localSecret() { php -r 'require $argv[1]; echo (new JConfig())->secret;' "$site/public_html/configuration.php"; }
+writeLiveConfig 'db.internal:3307' 'geheim met spatie' 'LiveGeheim123'
+writeLocalConfig 'lokaalGeheim'
+rm -rf "$site/backup"; pull --no-backup
+same "\$secret overnemen geeft exit 0" 0 "$rc"
+same "  lokale \$secret is nu die van live" "LiveGeheim123" "$(localSecret)"
+has "  meldt de aanpassing" 'secret aangepast naar de live-waarde'
+same "  één back-up van configuration.php in backup/" 1 "$(dumps 'configuration-before-secret-*.php')"
+grep -q "lokaalGeheim" "$(find "$site/backup" -name 'configuration-before-secret-*.php' | head -1)" && pass "  back-up bevat de oude waarde" || bad "  back-up mist de oude waarde"
+[ ! -e "$site/public_html/configuration.php.tmp" ] && pass "  geen .tmp van sed achtergelaten" || bad "  configuration.php.tmp staat er nog"
+grep -q 'public $dbprefix' "$site/public_html/configuration.php" && pass "  rest van configuration.php intact" || bad "  configuration.php beschadigd"
+# Al gelijk: niets aanpassen, geen back-up.
+rm -rf "$site/backup"; pull --no-backup
+has "  tweede run: al gelijk" 'secret is al gelijk aan live'
+same "  geen back-up als er niets verandert" 0 "$(dumps 'configuration-before-secret-*.php')"
+# Ongeldige live-waarde: lokaal ongewijzigd, waarschuwing.
+writeLiveConfig 'db.internal:3307' 'geheim met spatie' 'abc/def; rm -rf'
+writeLocalConfig 'lokaalGeheim'
+rm -rf "$site/backup"; pull --no-backup
+same "ongeldige live-\$secret geeft exit 0" 0 "$rc"
+has "  waarschuwt" 'secret van live niet uit te lezen'
+same "  lokale \$secret ongewijzigd" "lokaalGeheim" "$(localSecret)"
+writeLiveConfig 'db.internal:3307' 'geheim met spatie'
 
 finish

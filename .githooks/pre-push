@@ -1,0 +1,75 @@
+#!/bin/bash
+# pre-push hook: pusht een branch pas als bin/ci-local.sh voor die commit groen was (#643).
+# Installeren: git config core.hooksPath .githooks
+#
+# Per gepushte ref (stdin: <lokale ref> <lokale sha> <remote ref> <remote sha>):
+# - verwijderingen en tags gaan altijd door (een release-tag is al via de PR gecontroleerd);
+# - pushes naar main en develop gaan door (release en terugmerge; die code kwam via een PR);
+# - verder is een geldige stempel nodig (bash bin/ci-local.sh --check). Ontbreekt die en is de
+#   commit HEAD bij een schone werkboom, dan draait de hook eerst bin/ci-local.sh; faalt dat,
+#   dan gaat de push niet door.
+#
+# Noodknop: ${ENV_PREFIX}_SKIP_CI_LOCAL=1 git push … slaat de controle over (met een waarschuwing);
+# ENV_PREFIX komt uit scripts.conf (hier KWEKFESTIJN_SKIP_CI_LOCAL), zonder ENV_PREFIX: SKIP_CI_LOCAL (#645).
+# `git push --no-verify` slaat alle hooks over.
+
+zero="0000000000000000000000000000000000000000"
+top="$(git rev-parse --show-toplevel)" || exit 1
+# In een worktree zet git GIT_DIR voor de hook. Dan vindt `git -C bin rev-parse --show-toplevel`
+# in bin/_common.sh bin/ als toplevel; zonder die variabelen bepaalt git de repo zelf. Alleen als
+# de werkmap een .git heeft: anders (GIT_DIR/GIT_WORK_TREE van buiten) zijn ze juist nodig.
+if [ -e "$top/.git" ]; then
+    unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_PREFIX
+fi
+cd "$top" || exit 1
+ci="$top/bin/ci-local.sh"
+refs="$(cat)"
+
+# Naam van de noodknop uit ENV_PREFIX in scripts.conf; in een subshell ingelezen, zodat de rest van
+# scripts.conf de hook niet raakt. Alleen letters, cijfers en _ tellen als geldig voorvoegsel.
+env_prefix="$( . "$top/scripts.conf" > /dev/null 2>&1; printf '%s' "${ENV_PREFIX:-}")"
+case "$env_prefix" in *[!A-Za-z0-9_]*) env_prefix="" ;; esac
+skip_var="${env_prefix:+${env_prefix}_}SKIP_CI_LOCAL"
+if [ "${!skip_var:-}" = "1" ]; then
+    echo "⚠️  ${skip_var}=1: lokale CI overgeslagen. De CI op GitHub is de enige controle." >&2
+    exit 0
+fi
+# Oudere branch zonder ci-local.sh: niets te controleren.
+[ -f "$ci" ] || exit 0
+
+main_branch="$( . "$top/scripts.conf" 2>/dev/null; echo "${MAIN_BRANCH:-main}")"
+develop_branch="$( . "$top/scripts.conf" 2>/dev/null; echo "${DEVELOP_BRANCH:-develop}")"
+head_sha="$(git rev-parse HEAD 2>/dev/null)"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+    [ -n "$local_ref" ] || continue
+    [ "$local_sha" = "$zero" ] && continue                      # verwijdering
+    case "$local_ref" in refs/tags/*) continue ;; esac          # tag
+    case "$remote_ref" in
+        "refs/heads/$main_branch"|"refs/heads/$develop_branch") continue ;;
+    esac
+    [ "$local_sha" = "$remote_sha" ] && continue                # niets nieuws
+
+    if [ "$local_sha" = "$head_sha" ]; then
+        bash "$ci" --check < /dev/null && continue
+        if [ -n "$(git status --porcelain)" ]; then
+            echo "⛔ Push afgewezen: geen stempel voor ${local_sha:0:12} en de werkboom is niet schoon." >&2
+            echo "   Commit of stash je wijzigingen en push opnieuw (dan draait bin/ci-local.sh)." >&2
+            exit 1
+        fi
+        echo "Geen stempel voor ${local_sha:0:12}: bin/ci-local.sh draait eerst…" >&2
+        if bash "$ci" < /dev/null >&2 && bash "$ci" --check < /dev/null; then
+            continue
+        fi
+        echo "⛔ Push afgewezen: bin/ci-local.sh is niet groen voor ${local_sha:0:12}." >&2
+        echo "   Los de fouten op, commit en push opnieuw. Noodknop: ${skip_var}=1 git push" >&2
+        exit 1
+    fi
+
+    bash "$ci" --check "$local_sha" < /dev/null && continue
+    echo "⛔ Push afgewezen: geen stempel voor ${local_sha:0:12} ($local_ref is niet HEAD)." >&2
+    echo "   Check de branch uit en draai bash bin/ci-local.sh, of: ${skip_var}=1 git push" >&2
+    exit 1
+done <<< "$refs"
+
+exit 0

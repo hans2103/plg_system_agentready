@@ -250,6 +250,10 @@ reset_copy "$tmp/copy"
 run pf --only 5; has "hook niet gezet: WARNING" 'WARNING +5\.'
 ( cd "$tmp/copy" && git config core.hooksPath .githooks )
 run pf --only 5; has "hook gezet: OK" 'OK +5\.'
+has "  noemt pre-push (#643)" 'OK +5\..*pre-push'
+chmod -x "$tmp/copy/.githooks/pre-push"
+run pf --only 5; has "hook niet uitvoerbaar: WARNING" 'WARNING +5\..*niet uitvoerbaar'
+chmod +x "$tmp/copy/.githooks/pre-push"
 
 # ── CLI ──
 expect "--only beperkt de run" 0 bounded bash "$tmp/copy/bin/preflight.sh" --only 7

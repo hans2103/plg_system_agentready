@@ -5,7 +5,7 @@ Repo-indeling, branching, commit-conventies en lokaal bouwen en testen. Voor rel
 ## Aan de slag (eenmalig per clone)
 
 ```bash
-git config core.hooksPath .githooks        # commit-msg hook: issue-nummer verplicht
+git config core.hooksPath .githooks        # hooks: commit-msg (issue-nummer verplicht) en pre-push (bin/ci-local.sh)
 echo 'JOOMLA_DIR=/pad/naar/joomla/public_html' > .dev-local   # voor deploy-ddev.sh en setup-dev-links.sh (of zet AGENTREADY_JOOMLA_DIR)
 ```
 
@@ -63,9 +63,25 @@ Draai de tests en commit `vendor/` en `composer.lock` samen. De validate-workflo
 
 Nederlands, conventional, met issuenummer: `feat(markdown): #12 tabellen met colspan`. Zonder issue: `#000`. Geen `Co-Authored-By`. Release-commits (`chore(release): …`) en merges zijn uitgezonderd van de hook.
 
+## Lokale CI en draft-PR's
+
+Lokaal = snelle terugkoppeling, CI = bron van waarheid. `bash bin/ci-local.sh` draait vóór een push of `gh pr ready` dezelfde controles als Validate: preflight, PHP-lint over de hele repo, de unit-tests, de vendor-controle, de shell-tests en een testbuild met `package.sh` (en gitleaks als dat geïnstalleerd is). Wat het draait staat in `scripts.conf` (`CI_*`).
+
+```bash
+bash bin/ci-local.sh          # alle controles; bij succes een stempel voor HEAD
+bash bin/ci-local.sh --quick  # alleen preflight en de snelle tests; geen stempel
+bash bin/ci-local.sh --check  # exit 0 als HEAD een geldige stempel heeft
+```
+
+- **Stempel.** Bij succes schrijft het script `<git-common-dir>/ci-local/<commit>`. Die geldt alleen als HEAD die commit is en de werkboom schoon is (ook geen ongevolgde bestanden).
+- **pre-push hook** (`.githooks/pre-push`, actief via `core.hooksPath`): zonder stempel voor de gepushte commit draait de hook eerst `bin/ci-local.sh`; faalt dat, dan gaat de push niet door. Tags, verwijderingen en pushes naar `main`/`develop` gaan altijd door. Noodknop: `AGENTREADY_SKIP_CI_LOCAL=1 git push …` (`${ENV_PREFIX}_SKIP_CI_LOCAL`, met `ENV_PREFIX` uit `scripts.conf`); `git push --no-verify` slaat alle hooks over.
+- **Claude-hook** (`.claude/settings.json`, PreToolUse op Bash → `bin/claude-pr-guard.sh`): weigert `gh pr ready` en `gh pr create` zonder `--draft` als HEAD geen geldige stempel heeft. Een draft openen gaat altijd.
+- **Draft-PR's draaien geen Actions:** `validate.yml` start bij een PR pas bij *ready for review* (`types: [..., ready_for_review]` en `if: !draft` op de jobs); een nieuwe push breekt de vorige run af (`concurrency`).
+- **Werkwijze:** open de PR als draft (`gh pr create --draft --base develop`), draai `bash bin/ci-local.sh` tot het groen is en zet de PR dan met `gh pr ready` op ready for review. Vanuit Claude: draai `bin/ci-local.sh` eerst als eigen commando met een ruime time-out en push daarna.
+
 ## Pull requests
 
-Eén PR per issue naar `develop`. De validate-workflow draait lint (PHP 8.3 en 8.5), unit- en shell-tests, manifest- en lengtecontroles, de vendor-controle en een testbuild met controle op de inhoud van de zip.
+Eén PR per issue naar `develop`, als draft geopend; na een groene `bash bin/ci-local.sh` zet `gh pr ready` hem op ready for review (zie [Lokale CI en draft-PR's](#lokale-ci-en-draft-prs)). De validate-workflow draait lint (PHP 8.3 en 8.5), unit- en shell-tests, manifest- en lengtecontroles, de vendor-controle en een testbuild met controle op de inhoud van de zip.
 
 ## Taalbestanden
 
