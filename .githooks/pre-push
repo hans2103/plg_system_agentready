@@ -9,7 +9,8 @@
 #   commit HEAD bij een schone werkboom, dan draait de hook eerst bin/ci-local.sh; faalt dat,
 #   dan gaat de push niet door.
 #
-# Noodknop: KWEK_SKIP_CI_LOCAL=1 git push … slaat de controle over (met een waarschuwing).
+# Noodknop: ${ENV_PREFIX}_SKIP_CI_LOCAL=1 git push … slaat de controle over (met een waarschuwing);
+# ENV_PREFIX komt uit scripts.conf (hier KWEKFESTIJN_SKIP_CI_LOCAL), zonder ENV_PREFIX: SKIP_CI_LOCAL (#645).
 # `git push --no-verify` slaat alle hooks over.
 
 zero="0000000000000000000000000000000000000000"
@@ -24,8 +25,13 @@ cd "$top" || exit 1
 ci="$top/bin/ci-local.sh"
 refs="$(cat)"
 
-if [ "${KWEK_SKIP_CI_LOCAL:-}" = "1" ]; then
-    echo "⚠️  KWEK_SKIP_CI_LOCAL=1: lokale CI overgeslagen. De CI op GitHub is de enige controle." >&2
+# Naam van de noodknop uit ENV_PREFIX in scripts.conf; in een subshell ingelezen, zodat de rest van
+# scripts.conf de hook niet raakt. Alleen letters, cijfers en _ tellen als geldig voorvoegsel.
+env_prefix="$( . "$top/scripts.conf" > /dev/null 2>&1; printf '%s' "${ENV_PREFIX:-}")"
+case "$env_prefix" in *[!A-Za-z0-9_]*) env_prefix="" ;; esac
+skip_var="${env_prefix:+${env_prefix}_}SKIP_CI_LOCAL"
+if [ "${!skip_var:-}" = "1" ]; then
+    echo "⚠️  ${skip_var}=1: lokale CI overgeslagen. De CI op GitHub is de enige controle." >&2
     exit 0
 fi
 # Oudere branch zonder ci-local.sh: niets te controleren.
@@ -56,13 +62,13 @@ while read -r local_ref local_sha remote_ref remote_sha; do
             continue
         fi
         echo "⛔ Push afgewezen: bin/ci-local.sh is niet groen voor ${local_sha:0:12}." >&2
-        echo "   Los de fouten op, commit en push opnieuw. Noodknop: KWEK_SKIP_CI_LOCAL=1 git push" >&2
+        echo "   Los de fouten op, commit en push opnieuw. Noodknop: ${skip_var}=1 git push" >&2
         exit 1
     fi
 
     bash "$ci" --check "$local_sha" < /dev/null && continue
     echo "⛔ Push afgewezen: geen stempel voor ${local_sha:0:12} ($local_ref is niet HEAD)." >&2
-    echo "   Check de branch uit en draai bash bin/ci-local.sh, of: KWEK_SKIP_CI_LOCAL=1 git push" >&2
+    echo "   Check de branch uit en draai bash bin/ci-local.sh, of: ${skip_var}=1 git push" >&2
     exit 1
 done <<< "$refs"
 

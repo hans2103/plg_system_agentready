@@ -74,8 +74,9 @@ bash bin/ci-local.sh --check  # exit 0 als HEAD een geldige stempel heeft
 ```
 
 - **Stempel.** Bij succes schrijft het script `<git-common-dir>/ci-local/<commit>`. Die geldt alleen als HEAD die commit is en de werkboom schoon is (ook geen ongevolgde bestanden).
-- **pre-push hook** (`.githooks/pre-push`, actief via `core.hooksPath`): zonder stempel voor de gepushte commit draait de hook eerst `bin/ci-local.sh`; faalt dat, dan gaat de push niet door. Tags, verwijderingen en pushes naar `main`/`develop` gaan altijd door. Noodknop: `KWEK_SKIP_CI_LOCAL=1 git push …` (de hook is gelijk aan die van `oc1882_kwekfestijn`); `git push --no-verify` slaat alle hooks over.
+- **pre-push hook** (`.githooks/pre-push`, actief via `core.hooksPath`): zonder stempel voor de gepushte commit draait de hook eerst `bin/ci-local.sh`; faalt dat, dan gaat de push niet door. Tags, verwijderingen en pushes naar `main`/`develop` gaan altijd door. Noodknop: `AGENTREADY_SKIP_CI_LOCAL=1 git push …` (`${ENV_PREFIX}_SKIP_CI_LOCAL`, met `ENV_PREFIX` uit `scripts.conf`); `git push --no-verify` slaat alle hooks over.
 - **Claude-hook** (`.claude/settings.json`, PreToolUse op Bash → `bin/claude-pr-guard.sh`): weigert `gh pr ready` en `gh pr create` zonder `--draft` als HEAD geen geldige stempel heeft. Een draft openen gaat altijd.
+- **Draft-PR's draaien geen Actions:** `validate.yml` start bij een PR pas bij *ready for review* (`types: [..., ready_for_review]` en `if: !draft` op de jobs); een nieuwe push breekt de vorige run af (`concurrency`).
 - **Werkwijze:** open de PR als draft (`gh pr create --draft --base develop`), draai `bash bin/ci-local.sh` tot het groen is en zet de PR dan met `gh pr ready` op ready for review. Vanuit Claude: draai `bin/ci-local.sh` eerst als eigen commando met een ruime time-out en push daarna.
 
 ## Pull requests

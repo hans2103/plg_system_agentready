@@ -2,7 +2,7 @@
 # Test voor .githooks/pre-push (#643): pushen naar een lokale bare repo, zonder netwerk.
 # Gebruik: bash tests/shell/test_pre_push_hook.sh
 . "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
-unset KWEK_SKIP_CI_LOCAL
+unset KWEK_SKIP_CI_LOCAL T_SKIP_CI_LOCAL SKIP_CI_LOCAL
 
 r="$tmp/r"
 ci_repo "$r"
@@ -34,9 +34,12 @@ expect "push bij vieze werkboom" 1 push -q origin feature/1-test
 has "melding werkboom" 'werkboom is niet schoon'
 rm -f "$r/los.txt"
 
-# Noodknop.
-expect "KWEK_SKIP_CI_LOCAL=1" 0 bash -c "cd '$r' && KWEK_SKIP_CI_LOCAL=1 git push -q origin feature/1-test"
-has "noodknop waarschuwt" 'KWEK_SKIP_CI_LOCAL=1'
+# Noodknop: ${ENV_PREFIX}_SKIP_CI_LOCAL uit scripts.conf (#645); ci_repo heeft ENV_PREFIX="T".
+expect "oude naam KWEK_SKIP_CI_LOCAL=1 doet niets meer" 1 bash -c "cd '$r' && KWEK_SKIP_CI_LOCAL=1 git push -q origin feature/1-test"
+hasnt "  geen noodknop-waarschuwing" 'lokale CI overgeslagen'
+has "  afwijzing noemt de echte noodknop" 'Noodknop: T_SKIP_CI_LOCAL=1 git push'
+expect "T_SKIP_CI_LOCAL=1 (ENV_PREFIX=T)" 0 bash -c "cd '$r' && T_SKIP_CI_LOCAL=1 git push -q origin feature/1-test"
+has "noodknop waarschuwt met de echte naam" 'T_SKIP_CI_LOCAL=1: lokale CI overgeslagen'
 
 # Tag op een ongestempelde commit: niet geblokkeerd.
 ( cd "$r" && git tag v0.0.1 )
@@ -67,6 +70,18 @@ export_sep() { GIT_DIR="$tmp/sep.git" GIT_WORK_TREE="$sep" "$@"; }
   && export_sep git add -A && export_sep git commit -q -m "sep #3" && export_sep git remote add origin "$tmp/remote.git" )
 expect "push zonder .git in de werkmap" 0 bash -c "cd '$sep' && GIT_DIR='$tmp/sep.git' GIT_WORK_TREE='$sep' git push -q origin feature/3-sep"
 remote_has refs/heads/feature/3-sep && pass "branch met losse git-dir staat op de remote" || bad "branch met losse git-dir niet gepusht"
+
+# Zonder ENV_PREFIX in scripts.conf heet de noodknop SKIP_CI_LOCAL.
+np="$tmp/np"; mkdir -p "$np"
+cp -R "$r/bin" "$r/.githooks" "$np/"
+grep -v '^ENV_PREFIX=' "$r/scripts.conf" > "$np/scripts.conf"
+touch "$np/.ci-fail"
+git_init "$np"
+( cd "$np" && git config core.hooksPath .githooks && git add -A && git commit -q -m "np #4" && git remote add origin "$tmp/remote.git" && git switch -q -c feature/4-np )
+expect "zonder ENV_PREFIX: T_SKIP_CI_LOCAL=1 doet niets" 1 bash -c "cd '$np' && T_SKIP_CI_LOCAL=1 git push -q origin feature/4-np"
+expect "zonder ENV_PREFIX: SKIP_CI_LOCAL=1" 0 bash -c "cd '$np' && SKIP_CI_LOCAL=1 git push -q origin feature/4-np"
+has "  waarschuwt met SKIP_CI_LOCAL" 'SKIP_CI_LOCAL=1: lokale CI overgeslagen'
+hasnt "  geen voorvoegsel met underscore" '_SKIP_CI_LOCAL=1: lokale'
 
 # Push naar develop (terugmerge na een release): niet geblokkeerd.
 expect "push naar develop" 0 push -q origin HEAD:refs/heads/develop
