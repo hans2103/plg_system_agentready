@@ -193,7 +193,7 @@ Agent Ready follows Cloudflare's format, with three deliberate differences:
 
 **The Markdown is empty or misses content.** *Main content* may match the wrong element. Open the page source, find the element that holds the content, and put its selector first.
 
-**There is no Link header.** Check that *Link headers* is on, and that `llms.txt` or the agent skills index actually exist in the site root. The Markdown alternate link needs *Markdown version* on.
+**There is no Link header.** Check that *Link headers* is on, and that `llms.txt` or the agent skills index actually exist in the site root. The Markdown alternate link needs *Markdown version* on, and is left out where the page stays HTML anyway: on `noindex` pages and for logged-in users (with the matching settings on).
 
 ## Development
 

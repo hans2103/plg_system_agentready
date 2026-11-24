@@ -25,7 +25,7 @@ Src/
 ├── plugins/system/agentready/        # the plugin (manifest agentready.xml in the folder)
 │   ├── services/provider.php
 │   ├── src/Extension/AgentReady.php  # event wiring, settings, headers
-│   ├── src/Negotiation/              # AcceptHeader (q-values)
+│   ├── src/Negotiation/              # AcceptHeader (q-values), ConversionPolicy (logged-in, noindex)
 │   ├── src/Html/                     # Selector (CSS → XPath), PageExtractor, ExtractedPage, UrlResolver
 │   ├── src/Markdown/                 # MarkdownRenderer (league/html-to-markdown, tidy, tokens)
 │   ├── src/Http/                     # VaryHeader, LinkHeader

@@ -22,6 +22,7 @@ use HKweb\Plugin\System\AgentReady\Http\MarkdownHeaders;
 use HKweb\Plugin\System\AgentReady\Http\VaryHeader;
 use HKweb\Plugin\System\AgentReady\Markdown\MarkdownRenderer;
 use HKweb\Plugin\System\AgentReady\Negotiation\AcceptHeader;
+use HKweb\Plugin\System\AgentReady\Negotiation\ConversionPolicy;
 use Joomla\CMS\Application\CMSApplication;
 use Joomla\CMS\Document\HtmlDocument;
 use Joomla\CMS\Event\Application\AfterRenderEvent;
@@ -238,7 +239,8 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	/**
 	 * Adds the agent discovery links to the Link header, merged with links other plugins set:
 	 * llms.txt and the agent skills index (only when the file exists in the site root), the
-	 * sitemap (when its URL is set) and the Markdown version of this page.
+	 * sitemap (when its URL is set) and the Markdown version of this page (only when mayConvert()
+	 * allows it, so a noindex page or a logged-in user gets no alternate it cannot fetch).
 	 *
 	 * @param   CMSApplication  $app  The application
 	 *
@@ -274,7 +276,8 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 			$links[]    = LinkHeader::link($sitemapUrl, 'sitemap', 'application/xml');
 		}
 
-		if ($this->markdownEnabled() && (int) $this->params->get('link_markdown', 1) === 1) {
+		// Only a page that can be served as Markdown announces the alternate (see mayConvert()).
+		if ($this->markdownEnabled() && (int) $this->params->get('link_markdown', 1) === 1 && $this->mayConvert($app)) {
 			$links[] = LinkHeader::link(Uri::getInstance()->toString(), 'alternate', 'text/markdown');
 		}
 
@@ -347,19 +350,13 @@ final class AgentReady extends CMSPlugin implements SubscriberInterface
 	 */
 	private function mayConvert(CMSApplication $app): bool
 	{
-		if ((int) $this->params->get('skip_logged_in', 1) === 1 && !$app->getIdentity()?->guest) {
-			return false;
-		}
-
-		if ((int) $this->params->get('skip_noindex', 1) === 1) {
-			$robots = implode(',', [(string) $app->getDocument()->getMetaData('robots'), ...$this->headerValues($app, 'X-Robots-Tag')]);
-
-			if (preg_match('/\b(noindex|none)\b/i', $robots) === 1) {
-				return false;
-			}
-		}
-
-		return true;
+		return ConversionPolicy::allows(
+			(int) $this->params->get('skip_logged_in', 1) === 1,
+			(bool) $app->getIdentity()?->guest,
+			(int) $this->params->get('skip_noindex', 1) === 1,
+			(string) $app->getDocument()->getMetaData('robots'),
+			$this->headerValues($app, 'X-Robots-Tag')
+		);
 	}
 
 	/**

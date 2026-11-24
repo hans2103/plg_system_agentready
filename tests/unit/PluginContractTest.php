@@ -46,6 +46,8 @@ check('ai-catalog Link header', str_contains($source, "LinkHeader::link(\$root .
 check('MCP Server Card Link header, only when the file exists', str_contains($source, "is_file(JPATH_ROOT . '/' . self::MCP_SERVER_CARD)") && str_contains($source, "LinkHeader::link(\$root . self::MCP_SERVER_CARD, 'describedby', 'application/json')"), true);
 check('MCP Server Card path', str_contains($source, "MCP_SERVER_CARD = '.well-known/mcp/server-card.json'"), true);
 check('link_mcp_server_card defaults on', (string) ($fields['link_mcp_server_card']['default'] ?? ''), '1');
+check('Markdown alternate link only when the page may be converted', str_contains($source, "\$this->params->get('link_markdown', 1) === 1 && \$this->mayConvert(\$app)"), true);
+check('mayConvert() uses ConversionPolicy', str_contains($source, 'return ConversionPolicy::allows('), true);
 check('ai-catalog head link', str_contains($source, "addHeadLink(Uri::root(true) . '/' . self::AI_CATALOG, 'ai-catalog', 'rel', ['type' => 'application/json'])"), true);
 
 foreach (['en-GB', 'nl-NL'] as $tag) {
