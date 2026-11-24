@@ -21,7 +21,7 @@ namespace HKweb\Plugin\System\AgentReady\Negotiation;
  * The same answer decides the conversion and the Markdown alternate in the Link header, so the
  * header never promises a version the site does not deliver.
  *
- * @since  __DEPLOY_VERSION__
+ * @since  26.48.0
  */
 final class ConversionPolicy
 {
@@ -36,7 +36,7 @@ final class ConversionPolicy
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.48.0
 	 */
 	public static function allows(bool $skipLoggedIn, bool $guest, bool $skipNoindex, string $robotsMeta, array $xRobotsTag): bool
 	{
@@ -54,7 +54,7 @@ final class ConversionPolicy
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.48.0
 	 */
 	public static function isNoindex(string $robots): bool
 	{
