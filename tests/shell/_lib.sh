@@ -10,6 +10,11 @@ failed=0
 # shellcheck disable=SC1091
 . "$repo/scripts.conf"
 : "${SRC_DIR:=Src}"   # dezelfde default als bin/_common.sh
+[ "${BUILT_DIRS+x}" ] || BUILT_DIRS=()
+# --built=-argumenten voor bin/check-manifests.php, zoals preflight ze uit BUILT_DIRS maakt.
+built_args=()
+for _d in "${BUILT_DIRS[@]}"; do [ -n "$_d" ] && built_args+=("--built=$_d"); done
+unset _d
 
 pass() { echo "ok:   $1"; }
 bad()  { echo "FAIL: $1"; failed=1; }
@@ -56,6 +61,28 @@ git_init() { # map
 copy_repo() {
   mkdir -p "$1"
   ( cd "$repo" && git ls-files --cached --others --exclude-standard | while IFS= read -r f; do [ -e "$f" ] && printf '%s\n' "$f"; done | tar -cf - -T - ) | tar -xf - -C "$1"
+  git_init "$1"
+  ( cd "$1" && git add -A && git commit -q -m init )
+}
+
+# Kleine repo voor bin/ci-local.sh, de pre-push hook en de Claude-guard (#643): alleen die scripts
+# en een scripts.conf zonder composer/pnpm/integratie. De enige controle is CI_EXTRA_COMMANDS: die
+# faalt zodra .ci-fail bestaat.
+ci_repo() { # map
+  mkdir -p "$1/bin" "$1/.githooks"
+  cp "$repo/bin/_common.sh" "$repo/bin/ci-local.sh" "$repo/bin/claude-pr-guard.sh" "$repo/bin/claude-pr-guard.php" "$1/bin/"
+  cp "$repo/.githooks/pre-push" "$1/.githooks/"
+  cat > "$1/scripts.conf" <<'CONF'
+PROJECT_NAME="t"
+PACKAGE_ELEMENT="pkg_t"
+ENV_PREFIX="T"
+GITHUB_REPO="o/t"
+CI_COMPOSER_SCRIPTS=()
+CI_PNPM_SCRIPTS=()
+CI_FULL_COMPOSER_SCRIPTS=()
+CI_EXTRA_COMMANDS=('test ! -f .ci-fail')
+CI_INTEGRATION_SCRIPT=""
+CONF
   git_init "$1"
   ( cd "$1" && git add -A && git commit -q -m init )
 }

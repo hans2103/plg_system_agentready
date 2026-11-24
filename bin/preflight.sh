@@ -18,7 +18,7 @@
 #    2 SQL-migraties (ERROR + WARNING)        9 Merge-conflictmarkers (ERROR)
 #    3 Manifests: XML + dekking (ERROR)      10 Hardgecodeerde home-paden (WARNING)
 #    4 Versies gelijk (ERROR)                11 Geheimen (WARNING)
-#    5 Commit-msg hook actief (WARNING)      12 AIdocs-dekking van de changeset (flavour ronny)
+#    5 Git-hooks actief (WARNING)            12 AIdocs-dekking van de changeset (flavour ronny)
 #    6 Debug-resten (WARNING)                13 Ronny (flavour ronny)
 #    7 Lengtegrenzen (scripts.conf)          14 AIdocs-structuur en -dekking (flavour structure)
 #                                            15 strict_types in PHP-klassebestanden (WARNING)
@@ -251,9 +251,11 @@ ongeldige XML: $f"
         done < <({ printf '%s\n' package.xml "$UPDATES_XML"; git ls-files --cached --others --exclude-standard -- "$SRC_DIR" | grep '\.xml$' | grep -vE '(^|/)vendor/'; } | sort -u)
         [ -z "$xml_bad" ] || { error "3. Manifests — XML"; list "$xml_bad"; }
     fi
+    built_args=()
+    for d in "${BUILT_DIRS[@]}"; do [ -n "$d" ] && built_args+=("--built=$d"); done
     if [ "${#EXTENSION_MANIFESTS[@]}" -eq 0 ]; then
         ok "3. Manifests — n.v.t., geen EXTENSION_MANIFESTS in scripts.conf"
-    elif manifest_out="$("$PHP_BIN" bin/check-manifests.php --src="$SRC_DIR" "${EXTENSION_MANIFESTS[@]}" 2>&1)"; then
+    elif manifest_out="$("$PHP_BIN" bin/check-manifests.php --src="$SRC_DIR" ${built_args[@]+"${built_args[@]}"} "${EXTENSION_MANIFESTS[@]}" 2>&1)"; then
         [ -n "$xml_bad" ] || ok "3. Manifests — XML geldig en manifests komen overeen met de schijf"
     else
         error "3. Manifests — manifest en schijf lopen uiteen"; list "$manifest_out"
@@ -289,11 +291,23 @@ $f: versie '$v', package.xml heeft '$v_pkg'"
     else ok "4. Versies — package.xml en $((v_count - 1)) manifest(s)/JSON-bestand(en) staan alle op $v_pkg"; fi
 fi
 
-# 5. COMMIT-MSG HOOK (WARNING)
+# 5. GIT-HOOKS (WARNING): core.hooksPath wijst naar .githooks (commit-msg, pre-push) en elke hook
+#    daar is uitvoerbaar; een hook zonder x-bit slaat git stil over.
 if should_run 5; then
     hooks_path="$(git config --get core.hooksPath 2>/dev/null || true)"
-    if [ "$hooks_path" = ".githooks" ]; then ok "5. Commit-msg hook — core.hooksPath is .githooks"
-    else warning "5. Commit-msg hook — core.hooksPath is '${hooks_path:-<niet gezet>}'; draai: git config core.hooksPath .githooks"; fi
+    if [ "$hooks_path" != ".githooks" ]; then
+        warning "5. Git-hooks — core.hooksPath is '${hooks_path:-<niet gezet>}'; draai: git config core.hooksPath .githooks"
+    else
+        not_exec=""; hook_names=""
+        for h in .githooks/*; do
+            [ -f "$h" ] || continue
+            hook_names="$hook_names $(basename "$h")"
+            [ -x "$h" ] || not_exec="$not_exec
+$h"
+        done
+        if [ -n "$not_exec" ]; then warning "5. Git-hooks — niet uitvoerbaar (git slaat ze over; chmod +x):"; list "$not_exec"
+        else ok "5. Git-hooks — core.hooksPath is .githooks (${hook_names# })"; fi
+    fi
 fi
 
 # 6. DEBUG-RESTEN (WARNING)
@@ -330,6 +344,7 @@ fi
 #         belandt in de ZIP;
 #      b. een gevolgd bestand onder Src/ dat wel door een patroon wordt uitgesloten (CLAUDE.md-
 #         verwijzingen zijn bewust uitgesloten en tellen niet mee) komt juist niet in de ZIP.
+#    Een map uit BUILT_DIRS (scripts.conf) is genegeerd en hoort wél in de ZIP: geen lekkage.
 if should_run 8; then
     if [ ! -f .deployignore ]; then
         warning "8. Package-lekkage — .deployignore ontbreekt"
@@ -350,9 +365,19 @@ if should_run 8; then
             return 1
         }
 
+        is_built() {
+            local d
+            for d in "${BUILT_DIRS[@]}"; do
+                [ -n "$d" ] || continue
+                case "$1" in "${d%/}"/*) return 0 ;; esac
+            done
+            return 1
+        }
+
         leaks=""; lost=""
         while IFS= read -r f; do
             [ -n "$f" ] || continue
+            is_built "$f" && continue
             is_excluded "$f" || leaks="$leaks
 $f"
         done < <(git ls-files --others --ignored --exclude-standard -- "$SRC_DIR" 2>/dev/null || true)

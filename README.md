@@ -177,6 +177,24 @@ Agent Ready follows Cloudflare's format, with three deliberate differences:
 - **Joomla page cache** (*System - Page Cache*): works. The Markdown version gets its own cache entry, so a browser never gets cached Markdown and an agent never gets cached HTML.
 - **Joomla's Gzip Page Compression setting:** the plugin switches Joomla's own gzip off for front-end HTML pages. Joomla's compression drops every `Vary` value except `Accept-Encoding` (a bug in Joomla's `sendHeaders()`), which would mix up the HTML and Markdown versions in caches. Your web server or CDN compresses the pages instead; most already do.
 - **Cloudflare and other CDNs:** every HTML page carries `Vary: Accept`. On Cloudflare that is fine by default, because Cloudflare does not cache HTML. If you use a *Cache Everything* rule, Cloudflare ignores `Vary: Accept` and could serve the wrong version. Then add a cache rule that bypasses the cache when the request header `Accept` contains `text/markdown`.
+- **NGINX compression:** NGINX only compresses the types in `gzip_types`, and `text/markdown` is usually not one of them (DDEV's default NGINX does not list it). Because the plugin switches Joomla's gzip off, the Markdown version then goes out uncompressed. Add it to the list you already have:
+
+  ```nginx
+  gzip_types text/markdown;  # next to your existing types; text/html is always included
+  ```
+
+- **NGINX and `llms.txt`:** NGINX serves `.txt` files as `text/plain` without a charset. To send `llms.txt` as UTF-8 Markdown, the type the `Link` header announces, add to the `server` block:
+
+  ```nginx
+  location = /llms.txt {
+      types { }
+      default_type text/markdown;
+      charset utf-8;
+      charset_types text/markdown;
+  }
+  ```
+
+  If you only want the charset, `charset utf-8;` in the `server` block is enough: NGINX adds it to `text/plain` by default.
 
 ## Troubleshooting
 
@@ -193,7 +211,7 @@ Agent Ready follows Cloudflare's format, with three deliberate differences:
 
 **The Markdown is empty or misses content.** *Main content* may match the wrong element. Open the page source, find the element that holds the content, and put its selector first.
 
-**There is no Link header.** Check that *Link headers* is on, and that `llms.txt` or the agent skills index actually exist in the site root. The Markdown alternate link needs *Markdown version* on.
+**There is no Link header.** Check that *Link headers* is on, and that `llms.txt` or the agent skills index actually exist in the site root. The Markdown alternate link needs *Markdown version* on, and is left out where the page stays HTML anyway: on `noindex` pages and for logged-in users (with the matching settings on).
 
 ## Development
 

@@ -20,9 +20,11 @@ declare(strict_types=1);
  *    (bijv. een plugin): dat betekent de map van het manifest zelf;
  *  - het manifest zelf, het <scriptfile> en verborgen bestanden (.DS_Store) hoeven niet genoemd
  *    te worden, CLAUDE.md (verwijzing voor AI-tools, niet meegepakt) evenmin;
- *  - <languages>: elk genoemd taalbestand moet bestaan en de map ervan telt als genoemd.
+ *  - <languages>: elk genoemd taalbestand moet bestaan en de map ervan telt als genoemd;
+ *  - een genoemd item dat met --built is opgegeven (BUILT_DIRS in scripts.conf: een map die de
+ *    build maakt en die niet in git staat, zoals een library-vendor/) mag op schijf ontbreken.
  *
- * Gebruik: php bin/check-manifests.php [--src=Src] manifest.xml [manifest.xml ...]
+ * Gebruik: php bin/check-manifests.php [--src=Src] [--built=pad ...] manifest.xml [manifest.xml ...]
  *   Paden zijn relatief aan de huidige map (de repo-root).
  * Uitvoer: één regel per afwijking. Exitcode: 0 = consistent, 1 = afwijkingen,
  *   2 = geen manifests opgegeven, manifest ontbreekt of is onleesbaar.
@@ -68,9 +70,24 @@ function entriesOnDisk(string $dir): array
 }
 
 /**
+ * Normalises a repo-relative path for comparison (forward slashes, no empty or ./ segments).
+ */
+function normalisePath(string $path): string
+{
+    $path = str_replace('\\', '/', $path);
+
+    // Lege en ./-segmenten weg (een <files> zonder folder geeft "map/./naam").
+    $parts = array_filter(explode('/', $path), static fn (string $part): bool => $part !== '' && $part !== '.');
+
+    return implode('/', $parts);
+}
+
+/**
+ * @param  list<string>  $built  normalised paths of directories the build creates (may be missing)
+ *
  * @return list<string> gevonden afwijkingen voor één manifest
  */
-function checkManifest(string $manifest, string $src): array
+function checkManifest(string $manifest, string $src, array $built = []): array
 {
     $errors   = [];
     $xml      = simplexml_load_file($manifest);
@@ -165,7 +182,8 @@ function checkManifest(string $manifest, string $src): array
 
         foreach (array_diff($listed, $onDisk) as $name) {
             // Een geneste verwijzing (map/bestand) staat niet als top-level item op schijf.
-            if (!file_exists($directory . '/' . $name)) {
+            // Een map die de build maakt (--built) staat niet in git en mag ontbreken.
+            if (!file_exists($directory . '/' . $name) && !in_array(normalisePath($directory . '/' . $name), $built, true)) {
                 $errors[] = "{$manifest}: {$label}{$name} staat in het manifest maar niet op schijf";
             }
         }
@@ -181,18 +199,21 @@ function checkManifest(string $manifest, string $src): array
 // ---------------------------------------------------------------------------------------------
 
 $src       = 'Src';
+$built     = [];
 $manifests = [];
 
 foreach (array_slice($argv, 1) as $arg) {
     if (strncmp($arg, '--src=', 6) === 0) {
         $src = rtrim(substr($arg, 6), '/');
+    } elseif (strncmp($arg, '--built=', 8) === 0) {
+        $built[] = normalisePath(substr($arg, 8));
     } else {
         $manifests[] = $arg;
     }
 }
 
 if ($manifests === []) {
-    fwrite(STDERR, "Gebruik: check-manifests.php [--src=Src] manifest.xml [manifest.xml ...]\n");
+    fwrite(STDERR, "Gebruik: check-manifests.php [--src=Src] [--built=pad ...] manifest.xml [manifest.xml ...]\n");
     exit(2);
 }
 
@@ -206,7 +227,7 @@ foreach ($manifests as $manifest) {
         exit(2);
     }
 
-    $problems = array_merge($problems, checkManifest($manifest, $src));
+    $problems = array_merge($problems, checkManifest($manifest, $src, $built));
 }
 
 foreach ($problems as $problem) {

@@ -25,7 +25,7 @@ Src/
 ├── plugins/system/agentready/        # the plugin (manifest agentready.xml in the folder)
 │   ├── services/provider.php
 │   ├── src/Extension/AgentReady.php  # event wiring, settings, headers
-│   ├── src/Negotiation/              # AcceptHeader (q-values)
+│   ├── src/Negotiation/              # AcceptHeader (q-values), ConversionPolicy (logged-in, noindex)
 │   ├── src/Html/                     # Selector (CSS → XPath), PageExtractor, ExtractedPage, UrlResolver
 │   ├── src/Markdown/                 # MarkdownRenderer (league/html-to-markdown, tidy, tokens)
 │   ├── src/Http/                     # VaryHeader, LinkHeader
@@ -54,6 +54,7 @@ bash bin/preflight.sh              # lint, manifests, versions, secrets, AIdocs,
 bash bin/run-release.sh            # full release: merge develop → main, build, commit, tag, push, wait for the release
 bash bin/deploy-ddev.sh [-n] [-y]  # rsync the plugin (DEV_LINKS) into the local Joomla site
 bash tests/shell/run-all.sh        # tests for bin/
+bash bin/ci-local.sh               # the CI checks locally; stamps HEAD for the pre-push hook and gh pr ready (10 min timeout)
 for f in tests/unit/*.php; do php "$f" || echo "FAIL $f"; done   # plain-PHP unit tests, no PHPUnit
 ```
 
@@ -78,6 +79,8 @@ Commit messages in Dutch, conventional and with an issue number: `feat(markdown)
 ## PR's
 
 Do **not** add a 'Generated with Claude Code' line in a PR.
+
+Open a PR as a draft (`gh pr create --draft --base develop`), run `bash bin/ci-local.sh` until green, then `gh pr ready`; the PreToolUse hook in `.claude/settings.json` refuses `gh pr ready` and a non-draft `gh pr create` without a stamp. Details: `docs/Ontwikkelworkflow.md`.
 
 ## Versioning & Release
 

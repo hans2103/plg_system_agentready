@@ -3,7 +3,7 @@
 . "$(dirname "${BASH_SOURCE[0]}")/_lib.sh"
 
 copy_repo "$tmp/copy"
-cm() { ( cd "$tmp/copy" && php bin/check-manifests.php --src="$SRC_DIR" "${EXTENSION_MANIFESTS[@]}" ); }
+cm() { ( cd "$tmp/copy" && php bin/check-manifests.php --src="$SRC_DIR" ${built_args[@]+"${built_args[@]}"} "${EXTENSION_MANIFESTS[@]}" ); }
 
 expect "schone kopie" 0 cm
 has "  meldt overeenstemming" 'komen overeen'
@@ -50,6 +50,24 @@ mkdir "$mdir/js"
 run tm; same "niet-genoemde map in de template-media" 1 "$rc"; has "  benoemd" 'media/js staat op schijf maar niet in het manifest'
 rm -rf "$mdir"
 run tm; same "template-media ontbreken helemaal" 1 "$rc"; has "  benoemd" 'map media bestaat niet'
+reset_copy "$tmp/copy"
+
+# Een map die de build maakt (BUILT_DIRS, bijv. een library-vendor/) staat niet in git: met
+# --built mag hij ontbreken, zonder niet. Een andere ontbrekende map blijft een fout.
+pdir="$tmp/copy/$SRC_DIR/plugins/demo/gebouwd"
+mkdir -p "$pdir"
+touch "$pdir/gebouwd.php"
+cat > "$pdir/gebouwd.xml" <<'XML'
+<?xml version="1.0" encoding="UTF-8"?>
+<extension type="plugin" group="demo" method="upgrade">
+	<name>gebouwd</name>
+	<files><filename plugin="gebouwd">gebouwd.php</filename><folder>vendor</folder></files>
+</extension>
+XML
+bm() { ( cd "$tmp/copy" && php bin/check-manifests.php --src="$SRC_DIR" "$@" "$SRC_DIR/plugins/demo/gebouwd/gebouwd.xml" ); }
+run bm; same "gebouwde map ontbreekt zonder --built" 1 "$rc"; has "  benoemd" 'vendor staat in het manifest maar niet op schijf'
+expect "gebouwde map ontbreekt met --built" 0 bm --built="./$SRC_DIR/plugins/demo/gebouwd/vendor/"
+run bm --built="$SRC_DIR/plugins/demo/gebouwd/anders"; same "--built voor een andere map helpt niet" 1 "$rc"
 reset_copy "$tmp/copy"
 
 expect "ontbrekend manifest" 2 bash -c "cd '$tmp/copy' && php bin/check-manifests.php bestaat-niet.xml"

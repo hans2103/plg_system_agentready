@@ -44,6 +44,8 @@ unset _var
 : "${TIMEZONE:=Europe/Amsterdam}"
 : "${UPDATES_XML:=updates.xml}"
 : "${AIDOCS_FLAVOUR:=}"
+# BUILT_DIRS: mappen onder SRC_DIR die de build maakt (niet in git, wel in de package). Leeg = geen.
+[ "${BUILT_DIRS+x}" ] || BUILT_DIRS=()
 : "${LENGTH_LIMIT_SEVERITY:=WARNING}"
 case "$LENGTH_LIMIT_SEVERITY" in
     WARNING|ERROR) ;;

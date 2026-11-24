@@ -6,9 +6,10 @@
 - 2026-11-07: closer to Cloudflare: `MarkdownHeaders` (strip list, 6 MiB limit, site `Content-Signal` wins), site header/footer landmarks removed (issue #3)
 - 2026-11-07: `link_ai_catalog`: the ARD manifest `.well-known/ai-catalog.json` (`AgentReady::AI_CATALOG`) as `rel="ai-catalog"` in the Link header and as `<link>` in the head (`onBeforeCompileHead`), when the file exists (issue #000)
 - 2026-11-07: `link_mcp_server_card`: the MCP Server Card `.well-known/mcp/server-card.json` (`AgentReady::MCP_SERVER_CARD`) as `rel="describedby"` in the `Link` header, only when the file exists
+- 2026-11-24: `mayConvert()` moved to `Negotiation\ConversionPolicy`; the Markdown alternate in the `Link` header now also needs `mayConvert()`, so noindex pages and logged-in users get no alternate they cannot fetch (issue #17)
 
-Last updated: 2026-11-07
-Verified against: 292a195
+Last updated: 2026-11-24
+Verified against: bd2db3b
 Covers:
 - Src/plugins/system/agentready/
 
@@ -29,6 +30,7 @@ Design and reasoning: `docs/superpowers/specs/2026-11-07-agent-ready-design.md`.
 | `services/provider.php` | DI: creates `AgentReady` with the dispatcher and the plugin row, sets the application |
 | `src/Extension/AgentReady.php` | The only class that touches Joomla: events, conditions, settings, headers |
 | `src/Negotiation/AcceptHeader.php` | `prefersMarkdown(?string): bool` |
+| `src/Negotiation/ConversionPolicy.php` | `allows(bool, bool, bool, string, list<string>): bool`, `isNoindex(string): bool` |
 | `src/Html/Selector.php` | CSS subset → XPath: `toXPaths(string): list<string>` (list order), `toXPath(string): ?string` (union) |
 | `src/Html/PageExtractor.php` | `extract(html, contentSelectors, removeSelectors, pageUrl): ?ExtractedPage` |
 | `src/Html/ExtractedPage.php` | readonly: `meta` (title/description/image, only non-empty), `contentHtml`, `jsonLd` |
@@ -53,7 +55,7 @@ Design and reasoning: `docs/superpowers/specs/2026-11-07-agent-ready-design.md`.
 Stops unless: front end, `GET` or `HEAD`, document type `html`, status 200 (no `Status` header other than 200, response status 200).
 
 With Markdown on (`markdown`):
-1. If `AcceptHeader::prefersMarkdown()` and `mayConvert()` (guest when `skip_logged_in`; no `noindex`/`none` in the robots meta or `X-Robots-Tag` when `skip_noindex`) and `convert()` succeeds: done, no Link headers.
+1. If `AcceptHeader::prefersMarkdown()` and `mayConvert()` (`ConversionPolicy::allows()`: guest when `skip_logged_in`; no `noindex`/`none` in the robots meta or `X-Robots-Tag` when `skip_noindex`) and `convert()` succeeds: done, no Link headers.
 2. Else, with `vary_html`: `Vary` gets `Accept` merged in (and Joomla gzip off).
 
 With `link_headers`: `addLinks()`.
@@ -74,7 +76,7 @@ One `Link` header (`setHeader(…, true)`), merged with existing `Link` values b
 - `<{root}.well-known/ai-catalog.json>; rel="ai-catalog"; type="application/json"`: `aiCatalogEnabled()`;
 - `<{root}.well-known/mcp/server-card.json>; rel="describedby"; type="application/json"`: `link_mcp_server_card` and the file exists (a static file: the CloudPanel vhost serves `/.well-known/` without PHP);
 - `<{sitemap}>; rel="sitemap"; type="application/xml"`: `sitemap_url` set (relative → `Uri::root()` before it);
-- `<{page URL}>; rel="alternate"; type="text/markdown"`: Markdown on and `link_markdown`.
+- `<{page URL}>; rel="alternate"; type="text/markdown"`: Markdown on, `link_markdown` and `mayConvert()` (the same rule as the conversion, so the header never promises Markdown the page does not deliver).
 
 ## Negotiation
 
@@ -110,7 +112,7 @@ The defaults of `content_selector` and `remove_selectors` exist twice (manifest 
 
 ## Tests
 
-`tests/unit/`: `AcceptHeaderTest`, `SelectorTest`, `UrlResolverTest`, `PageExtractorTest`, `MarkdownRendererTest`, `VaryHeaderTest`, `LinkHeaderTest`, `MarkdownHeadersTest`, `ConversionCasesTest` (end-to-end cases from gehandicaptenvalkenswaard.nl and momentsuntil.com) and `PluginContractTest` (manifest ↔ class settings ↔ en-GB/nl-NL strings, subscribed events, package version). `AgentReady` itself has no unit test (it needs Joomla); test it on a DDEV site (`docs/Ontwikkelworkflow.md`).
+`tests/unit/`: `AcceptHeaderTest`, `SelectorTest`, `UrlResolverTest`, `PageExtractorTest`, `MarkdownRendererTest`, `VaryHeaderTest`, `LinkHeaderTest`, `MarkdownHeadersTest`, `ConversionPolicyTest` (noindex in meta or `X-Robots-Tag`, logged-in users, settings off), `ConversionCasesTest` (end-to-end cases from gehandicaptenvalkenswaard.nl and momentsuntil.com) and `PluginContractTest` (manifest ↔ class settings ↔ en-GB/nl-NL strings, subscribed events, package version, the alternate link depends on `mayConvert()`). `AgentReady` itself has no unit test (it needs Joomla); test it on a DDEV site (`docs/Ontwikkelworkflow.md`).
 
 ## See also
 
