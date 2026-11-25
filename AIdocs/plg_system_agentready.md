@@ -7,9 +7,10 @@
 - 2026-11-07: `link_ai_catalog`: the ARD manifest `.well-known/ai-catalog.json` (`AgentReady::AI_CATALOG`) as `rel="ai-catalog"` in the Link header and as `<link>` in the head (`onBeforeCompileHead`), when the file exists (issue #000)
 - 2026-11-07: `link_mcp_server_card`: the MCP Server Card `.well-known/mcp/server-card.json` (`AgentReady::MCP_SERVER_CARD`) as `rel="describedby"` in the `Link` header, only when the file exists
 - 2026-11-24: `mayConvert()` moved to `Negotiation\ConversionPolicy`; the Markdown alternate in the `Link` header now also needs `mayConvert()`, so noindex pages and logged-in users get no alternate they cannot fetch (issue #17)
+- 2026-11-25: shop-page fixes from the Magento port: no indentation outside lists (no accidental code blocks), empty links get their `aria-label`/`title` or go, empty list items go, skip links and labels of removed controls go, link text trimmed (issue #000)
 
-Last updated: 2026-11-24
-Verified against: bd2db3b
+Last updated: 2026-11-25
+Verified against: 460ba82
 Covers:
 - Src/plugins/system/agentready/
 
@@ -88,15 +89,15 @@ One `Link` header (`setHeader(…, true)`), merged with existing `Link` values b
 - **meta**: title = `meta[name=title]` → `og:title` → `<title>`; description = `meta[name=description]` → `og:description`; image = `og:image`; whitespace collapsed.
 - **JSON-LD**: every `script[type=application/ld+json]` in the document (case-insensitive type), trimmed.
 - **content**: the first match of the content selectors in list order (not document order); null when none matches.
-- **removeNodes**: comments, the site landmarks (`SITE_LANDMARKS`: `header`/`footer` without an `article`, `aside`, `main`, `nav` or `section` ancestor, and `[role=banner]`/`[role=contentinfo]`, as the HTML spec defines banner and contentinfo) and every match of the remove selectors inside the content.
-- **tidy**: removes `img[alt=""]`; unwraps links to `#…` and `javascript:`; a link around block elements (clickable card) becomes a link around its texts joined with spaces; two sibling elements with nothing between them get a space text node (name and job title in separate spans).
+- **removeNodes**: comments, the site landmarks (`SITE_LANDMARKS`: `header`/`footer` without an `article`, `aside`, `main`, `nav` or `section` ancestor, and `[role=banner]`/`[role=contentinfo]`, as the HTML spec defines banner and contentinfo), every match of the remove selectors inside the content, and each `label` whose control (its `for` target, or the control it wraps) is removed (`orphanedLabels()`).
+- **tidy**: removes `img[alt=""]`; removes skip links (`isSkipLink()`: a `#…` link with class token `sr-only`, `visually-hidden`, `screen-reader-text` or one with a `skip` part); unwraps other links to `#…` and `javascript:`; a link with no text and no `img` left gets its `aria-label`, else `title` (then removed), as text, or is removed without one; empty `li` (no text, no `img`) and `ul`/`ol` without `li` are removed; a link around block elements (clickable card) becomes a link around its texts joined with spaces; whitespace at the start and end of a link's text moves outside the link (`trimLinkText()`); two sibling elements with nothing between them get a space text node (name and job title in separate spans), unless one already has whitespace at that side.
 - **absolutize**: `href` and `src` resolved against `<base href>` (itself resolved) or the page URL.
 
 `Selector` supports `tag`, `*`, `#id`, `.class` (whole word), `[attr]`, `[attr=value]` (bare or quoted), compounds, descendant and `>` combinators, comma lists; a part with other syntax is skipped.
 
 ## Rendering
 
-`MarkdownRenderer::render()`: league `HtmlConverter` with `header_style` atx, `strip_tags`, `remove_nodes` script/style/noscript/template, `strip_placeholder_links`, `hard_break` false (a `<br>` becomes two spaces + newline), `list_item_style` `-`, plus `TableConverter`. Then `tidy()` outside fenced code: whitespace-only lines emptied, 1–3 leading spaces, extra spaces after a heading's `#` and trailing spaces removed (two trailing spaces after text kept), runs of blank lines collapsed, HTML entities decoded except `&lt;`/`&gt;`. Empty body → `''`.
+`MarkdownRenderer::render()`: league `HtmlConverter` with `header_style` atx, `strip_tags`, `remove_nodes` script/style/noscript/template, `strip_placeholder_links`, `hard_break` false (a `<br>` becomes two spaces + newline), `list_item_style` `-`, plus `TableConverter`. Then `tidy()` outside fenced code: whitespace-only lines emptied, links without text (`[ ](url)`, not `![](src)`) removed with one surrounding space, leading whitespace removed outside lists (a list item and the indented lines after it keep theirs when it is four spaces or a tab: nesting and continuation), extra spaces after a heading's `#` and trailing spaces removed (two trailing spaces after text kept), runs of blank lines collapsed, HTML entities decoded except `&lt;`/`&gt;`. Empty body → `''`.
 
 Layout: `---` frontmatter with JSON-encoded values (valid YAML), body, then ```` ```json ```` with each JSON-LD block on its own line; parts separated by a blank line, one trailing newline. `estimateTokens()` = ceil(characters / 4).
 
