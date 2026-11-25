@@ -151,7 +151,8 @@ In every other case the normal HTML goes out unchanged. If the conversion fails,
 ### What ends up in the Markdown
 
 - **Content:** the first element that matches *Main content*, minus the *Leave out* elements, HTML comments and the site header and footer. The site header and footer are what the HTML spec calls them: a `header` or `footer` outside an `article`, `aside`, `main`, `nav` or `section`, and anything with `role="banner"` or `role="contentinfo"`. The header of an article, with its title, stays.
-- **Links and images:** relative URLs become absolute. Links to `#anchors` or `javascript:` become plain text. Decorative images (`alt=""`) are left out.
+- **Links and images:** relative URLs become absolute. Links to `#anchors` or `javascript:` become plain text; skip links ("Skip to content") are left out. Decorative images (`alt=""`) are left out. A link with only an icon or a decorative image gets its `aria-label` or `title` as text, or is left out when it has neither; list items left empty go too.
+- **Forms:** a `<label>` whose form control is left out goes with it.
 - **Frontmatter:** `title` from `<meta name="title">`, then `og:title`, then `<title>`; `description` from `<meta name="description">`, then `og:description`; `image` from `og:image`. Empty fields are left out.
 - **JSON-LD:** every `<script type="application/ld+json">` on the page, also those outside the main content.
 

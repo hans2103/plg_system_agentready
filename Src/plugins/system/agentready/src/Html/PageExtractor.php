@@ -202,11 +202,79 @@ final class PageExtractor
 			}
 		}
 
+		$remove = array_merge($remove, self::orphanedLabels($xpath, $content, $remove));
+
 		foreach ($remove as $node) {
 			if ($node->parentNode instanceof DOMNode) {
 				$node->parentNode->removeChild($node);
 			}
 		}
+	}
+
+	/**
+	 * The labels whose form control is being removed: the element their for attribute names, or
+	 * the control they wrap. Without the control the label ("Quantity") is stray UI text.
+	 *
+	 * @param   DOMXPath       $xpath    The document
+	 * @param   DOMElement     $content  The main content element
+	 * @param   list<DOMNode>  $remove   The nodes being removed
+	 *
+	 * @return  list<DOMNode>
+	 *
+	 * @since   __DEPLOY_VERSION__
+	 */
+	private static function orphanedLabels(DOMXPath $xpath, DOMElement $content, array $remove): array
+	{
+		$removed = static function (DOMNode $node) use ($remove, $content): bool {
+			for ($current = $node; $current !== null && $current !== $content; $current = $current->parentNode) {
+				if (in_array($current, $remove, true)) {
+					return true;
+				}
+			}
+
+			return false;
+		};
+
+		$labels = [];
+
+		foreach (self::nodes($xpath, './/label', $content) as $label) {
+			if (!$label instanceof DOMElement || $removed($label)) {
+				continue;
+			}
+
+			$for      = trim($label->getAttribute('for'));
+			$controls = $for !== ''
+				? self::nodes($xpath, '//*[@id=' . self::xpathLiteral($for) . ']', $label)
+				: self::nodes($xpath, './/input | .//select | .//textarea | .//button | .//meter | .//output | .//progress', $label);
+
+			if ($controls !== [] && $removed($controls[0])) {
+				$labels[] = $label;
+			}
+		}
+
+		return $labels;
+	}
+
+	/**
+	 * A string as an XPath literal, also when it contains quotes.
+	 *
+	 * @param   string  $value  The string
+	 *
+	 * @return  string
+	 *
+	 * @since   __DEPLOY_VERSION__
+	 */
+	private static function xpathLiteral(string $value): string
+	{
+		if (!str_contains($value, "'")) {
+			return "'" . $value . "'";
+		}
+
+		if (!str_contains($value, '"')) {
+			return '"' . $value . '"';
+		}
+
+		return "concat('" . str_replace("'", "', \"'\", '", $value) . "')";
 	}
 
 	/**
@@ -220,11 +288,15 @@ final class PageExtractor
 	 * Fixes the HTML patterns that convert to broken or glued-together Markdown:
 	 *
 	 * - a decorative image (alt="") is removed;
+	 * - a skip link (see isSkipLink()) is removed;
 	 * - a link to a fragment (#…) or javascript: keeps only its text;
+	 * - a link with no text and no image left (an icon) gets its aria-label or title as text, or
+	 *   is removed when it has neither; list items left empty go, and lists left without items;
 	 * - a link around blocks (a clickable card) becomes a link around its text, the blocks' texts
 	 *   separated by a space;
+	 * - whitespace at the start and end of a link's text moves outside the link;
 	 * - two sibling elements with nothing between them (name and job title that CSS shows on two
-	 *   lines) get a space between them.
+	 *   lines) get a space between them, unless one of them already has one at that side.
 	 *
 	 * @param   DOMXPath    $xpath    The document
 	 * @param   DOMElement  $content  The main content element
@@ -244,6 +316,15 @@ final class PageExtractor
 		foreach (self::nodes($xpath, './/a[@href]', $content) as $link) {
 			$href = strtolower(trim($link->getAttribute('href')));
 
+			if (!$link instanceof DOMElement) {
+				continue;
+			}
+
+			if (strlen($href) > 1 && $href[0] === '#' && self::isSkipLink($link)) {
+				$link->parentNode?->removeChild($link);
+				continue;
+			}
+
 			if ($href !== '' && ($href[0] === '#' || str_starts_with($href, 'javascript:'))) {
 				while ($link->firstChild !== null) {
 					$link->parentNode?->insertBefore($link->firstChild, $link);
@@ -251,6 +332,50 @@ final class PageExtractor
 
 				$link->parentNode?->removeChild($link);
 			}
+		}
+
+		// A link with no text and no image left (an icon, or a decorative image removed above):
+		// its accessible name (aria-label, else title) becomes the text; without one it goes.
+		foreach (self::nodes($xpath, './/a[@href][not(normalize-space(.))][not(.//img)]', $content) as $link) {
+			if (!$link instanceof DOMElement) {
+				continue;
+			}
+
+			$name = '';
+
+			foreach (['aria-label', 'title'] as $attribute) {
+				$name = trim(preg_replace('/\s+/u', ' ', $link->getAttribute($attribute)) ?? '');
+
+				if ($name !== '') {
+					break;
+				}
+			}
+
+			if ($name === '') {
+				$link->parentNode?->removeChild($link);
+				continue;
+			}
+
+			while ($link->firstChild !== null) {
+				$link->removeChild($link->firstChild);
+			}
+
+			$link->appendChild($doc->createTextNode($name));
+
+			if ($attribute === 'title') {
+				// Else the converter repeats it as the link title: [Name](url "Name").
+				$link->removeAttribute('title');
+			}
+		}
+
+		// List items left empty (their only content removed) would become bare bullets; a list
+		// without items goes too.
+		foreach (self::nodes($xpath, './/li[not(normalize-space(.))][not(.//img)]', $content) as $item) {
+			$item->parentNode?->removeChild($item);
+		}
+
+		foreach (self::nodes($xpath, './/ul[not(li)] | .//ol[not(li)]', $content) as $list) {
+			$list->parentNode?->removeChild($list);
 		}
 
 		$blocks = implode(' or ', array_map(static fn (string $tag): string => 'self::' . $tag, self::BLOCK_ELEMENTS));
@@ -271,9 +396,81 @@ final class PageExtractor
 			$card->appendChild($doc->createTextNode($label));
 		}
 
-		foreach (self::nodes($xpath, './/*[following-sibling::node()[1][self::*]]', $content) as $element) {
-			$element->parentNode?->insertBefore($doc->createTextNode(' '), $element->nextSibling);
+		foreach (self::nodes($xpath, './/a[@href]', $content) as $link) {
+			self::trimLinkText($xpath, $link);
 		}
+
+		foreach (self::nodes($xpath, './/*[following-sibling::node()[1][self::*]]', $content) as $element) {
+			$next = $element->nextSibling;
+
+			if (preg_match('/\s$/u', $element->textContent) === 1 || preg_match('/^\s/u', (string) $next?->textContent) === 1) {
+				continue;
+			}
+
+			$element->parentNode?->insertBefore($doc->createTextNode(' '), $next);
+		}
+	}
+
+	/**
+	 * Moves the whitespace at the start and end of a link's text outside the link, so the text
+	 * converts to [text](url) instead of [ text ](url) and stays apart from the words around it.
+	 *
+	 * @param   DOMXPath  $xpath  The document
+	 * @param   DOMNode   $link   A link
+	 *
+	 * @return  void
+	 *
+	 * @since   __DEPLOY_VERSION__
+	 */
+	private static function trimLinkText(DOMXPath $xpath, DOMNode $link): void
+	{
+		$texts = self::nodes($xpath, './/text()', $link);
+
+		foreach (['before' => $texts, 'after' => array_reverse($texts)] as $side => $ordered) {
+			$trimmed = false;
+
+			foreach ($ordered as $text) {
+				$value = (string) $text->nodeValue;
+				$kept  = $side === 'before' ? (preg_replace('/^\s+/u', '', $value) ?? $value) : (preg_replace('/\s+$/u', '', $value) ?? $value);
+
+				if ($kept !== $value) {
+					$text->nodeValue = $kept;
+					$trimmed         = true;
+				}
+
+				if ($kept !== '') {
+					break;
+				}
+			}
+
+			if ($trimmed && $link->parentNode !== null && $link->ownerDocument !== null) {
+				$link->parentNode->insertBefore($link->ownerDocument->createTextNode(' '), $side === 'before' ? $link : $link->nextSibling);
+			}
+		}
+	}
+
+	/**
+	 * Whether an in-page link is a skip link ("Skip carousel", "Skip to content"): a keyboard
+	 * shortcut past a part of the page, hidden until it gets focus. Recognised by its class: a
+	 * token sr-only, visually-hidden, screen-reader-text, or skip (also as part, like skip-link).
+	 *
+	 * @param   DOMElement  $link  A link to a fragment
+	 *
+	 * @return  boolean
+	 *
+	 * @since   __DEPLOY_VERSION__
+	 */
+	private static function isSkipLink(DOMElement $link): bool
+	{
+		foreach (preg_split('/\s+/', strtolower($link->getAttribute('class')), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $token) {
+			if (in_array($token, ['sr-only', 'visually-hidden', 'screen-reader-text'], true)
+				|| preg_match('/(^|-)skip(-|$)/', $token) === 1
+			) {
+				return true;
+			}
+		}
+
+		return false;
 	}
 
 	/**
