@@ -34,6 +34,8 @@ $plain = MarkdownRenderer::render(new ExtractedPage([], '<p>x</p>', []));
 check('no meta, no json-ld', $plain, "x\n");
 check('frontmatter disabled', str_starts_with(MarkdownRenderer::render($page, false, true), '# Café'), true);
 check('json-ld disabled', str_contains(MarkdownRenderer::render($page, true, false), '```json'), false);
+$full = MarkdownRenderer::render(new ExtractedPage(['image' => 'https://e.test/i.png', 'lang' => 'nl', 'url' => 'https://e.test/p', 'title' => 'T'], '<p>B</p>', []));
+check('frontmatter order title, url, lang, image', str_starts_with($full, "---\ntitle: \"T\"\nurl: \"https://e.test/p\"\nlang: \"nl\"\nimage: \"https://e.test/i.png\"\n---\n\nB\n"), true);
 check('empty content', MarkdownRenderer::render(new ExtractedPage(['title' => 'T'], '', ['{}'])), '');
 check('whitespace-only content', MarkdownRenderer::render(new ExtractedPage(['title' => 'T'], "<div> \n </div>", [])), '');
 
@@ -45,6 +47,12 @@ check('tidy: whitespace-only lines and blank runs', MarkdownRenderer::tidy("a\n 
 check('tidy: stray indentation and trailing space', MarkdownRenderer::tidy(" [x](y) \n   z"), "[x](y)\nz");
 check('tidy: one space after heading marks', MarkdownRenderer::tidy("#  How it works\n##   Two"), "# How it works\n## Two");
 check('tidy: four-space nesting kept', MarkdownRenderer::tidy("- a\n    - b"), "- a\n    - b");
+check('tidy: deep indentation outside lists gone', MarkdownRenderer::tidy("Price\n\n     € 7,49\n\t\tIn stock"), "Price\n\n€ 7,49\nIn stock");
+check('tidy: list nesting kept after blank line', MarkdownRenderer::tidy("1. a\n\n    - b\n        - c"), "1. a\n\n    - b\n        - c");
+check('tidy: ordered list continuation kept', MarkdownRenderer::tidy("1. Name\n\n      Review text"), "1. Name\n\n      Review text");
+check('tidy: indentation after a list ends gone', MarkdownRenderer::tidy("- a\n\nText\n\n     more"), "- a\n\nText\n\nmore");
+check('tidy: empty links dropped', MarkdownRenderer::tidy("Share [ ](https://x.test/a)[](https://x.test/b)[\t](https://x.test/c) here"), "Share here");
+check('tidy: image without alt kept', MarkdownRenderer::tidy('![](https://x.test/a.jpg)'), '![](https://x.test/a.jpg)');
 check('tidy: hard break kept', MarkdownRenderer::tidy("Adres  \nPostcode"), "Adres  \nPostcode");
 check('tidy: entities decoded, lt/gt kept', MarkdownRenderer::tidy('Sophie &amp; Jamie &rsquo; &#169; &lt;b&gt;'), 'Sophie & Jamie ’ © &lt;b&gt;');
 check('tidy: fenced code untouched', MarkdownRenderer::tidy("```\n  &amp;  \n```"), "```\n  &amp;  \n```");

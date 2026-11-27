@@ -63,4 +63,29 @@ check('nested list',
 	md('<ul><li>een</li><li>twee<ul><li>genest</li></ul></li></ul><ol><li>eerst</li><li>dan</li></ol>'),
 	"- een\n- twee\n    - genest\n\n1. eerst\n2. dan");
 
+check('indented price is no code block',
+	md("<div class=\"price-box\"><span class=\"price\">\n                     € 7,49\n                </span></div><p>Op voorraad</p>"),
+	"€ 7,49\n\nOp voorraad");
+check('icon-only links dropped',
+	md('<p>Deel <a href="https://example.org/share"><svg><path d="M0"/></svg></a><a href="/wishlist"> </a><a href="/compare"><span aria-hidden="true">+</span></a><a href="/zoom"><img src="/images/zoom.svg" alt=""></a> hier</p>'),
+	'Deel hier');
+check('image link with aria-label or title gets that as text',
+	md('<ul><li><a href="/merk/a" aria-label="Merk A"><img src="/images/a.webp" alt=""></a></li><li><a href="/merk/b" title="Merk B"><svg></svg></a></li></ul>'),
+	"- [Merk A](" . BASE . "merk/a)\n- [Merk B](" . BASE . "merk/b)");
+check('empty list items and lists dropped',
+	md('<p>Voor</p><ul><li><a href="/x"><img src="/images/x.webp" alt=""></a></li><li>Blijft</li><li> </li></ul><ul><li><a href="/y"></a></li><li><button>Meer</button></li></ul><p>Na</p>'),
+	"Voor\n\n- Blijft\n\nNa");
+check('spaces inside link text move outside',
+	md('<p>Zie<a href="/waarborg"> Veilig melden </a>en <a href="/reviews"><span> 4,8 </span><span>Google</span> </a>nu</p>'),
+	'Zie [Veilig melden](' . BASE . 'waarborg) en [4,8 Google](' . BASE . 'reviews) nu');
+check('link around an image with alt kept',
+	md('<p><a href="/foto.html"><img src="/images/a.jpg" alt="Drempel"></a></p>'),
+	'[![Drempel](' . BASE . 'images/a.jpg)](' . BASE . 'foto.html)');
+check('skip links removed',
+	md('<a href="#slider-end" class="sr-only focus:not-sr-only">Carrousel overslaan</a><a class="skip-link" href="#main">Naar de inhoud</a><p>Inhoud</p><span id="slider-end"></span>'),
+	'Inhoud');
+check('label of a removed control removed',
+	md('<p>Naam</p><label for="q">Zoeken</label><input id="q" name="q"><label><input type="checkbox" name="news"> Nieuwsbrief</label><label for="elsewhere">Blijft</label><p>Einde</p>'),
+	"Naam\n\nBlijft\n\nEinde");
+
 finish('ConversionCases');

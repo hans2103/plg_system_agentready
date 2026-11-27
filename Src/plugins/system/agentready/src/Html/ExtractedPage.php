@@ -24,7 +24,7 @@ namespace HKweb\Plugin\System\AgentReady\Html;
 final readonly class ExtractedPage
 {
 	/**
-	 * @param   array<string, string>  $meta         title, description and image; only keys with a value
+	 * @param   array<string, string>  $meta         title, description, url, lang and image; only keys with a value
 	 * @param   string                 $contentHtml  Inner HTML of the main content, cleaned
 	 * @param   list<string>           $jsonLd       Trimmed contents of each application/ld+json script
 	 *

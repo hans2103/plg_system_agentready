@@ -52,7 +52,7 @@ final class MarkdownRenderer
 		if ($frontmatter && $page->meta !== []) {
 			$lines = ['---'];
 
-			foreach (['title', 'description', 'image'] as $key) {
+			foreach (['title', 'description', 'url', 'lang', 'image'] as $key) {
 				if (isset($page->meta[$key])) {
 					// A JSON string is a valid YAML double-quoted scalar.
 					$lines[] = $key . ': ' . json_encode($page->meta[$key], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
@@ -73,9 +73,10 @@ final class MarkdownRenderer
 	}
 
 	/**
-	 * Cleans the converter output outside fenced code blocks: whitespace-only lines become empty,
-	 * stray indentation of one to three spaces, extra spaces after a heading's # and trailing spaces go (two trailing spaces after
-	 * text stay: that is a hard line break), runs of blank lines become one, and HTML entities
+	 * Cleans the converter output outside fenced code blocks: whitespace-only lines become empty;
+	 * links without text ([ ](url)), indentation outside lists (four spaces would make a code
+	 * block), extra spaces after a heading's # and trailing spaces go (two trailing spaces after
+	 * text stay: that is a hard line break); runs of blank lines become one, and HTML entities
 	 * become their characters (except &lt; and &gt;, which keep text from turning into HTML).
 	 *
 	 * @param   string  $markdown  The converter output
@@ -88,6 +89,7 @@ final class MarkdownRenderer
 	{
 		$lines   = explode("\n", str_replace(["\r\n", "\r"], "\n", $markdown));
 		$inFence = false;
+		$inList  = false;
 
 		foreach ($lines as $i => $line) {
 			if (preg_match('/^\s{0,3}(```|~~~)/', $line) === 1) {
@@ -105,7 +107,20 @@ final class MarkdownRenderer
 				continue;
 			}
 
-			$line = preg_replace('/^ {1,3}(?=\S)/', '', $line) ?? $line;
+			// A link without text ([ ](url): an icon) goes, and with it one of the spaces around it.
+			$line = preg_replace_callback(
+				'/( ?)(?:(?<![!\\\\])\[\s*\]\([^)\s]*\))+( ?)/',
+				static fn (array $m): string => ($m[1] . $m[2]) === '' ? '' : ' ',
+				$line
+			) ?? $line;
+
+			// Indentation only means something inside a list (nesting, continued items); anywhere
+			// else four or more spaces would turn the line into a code block.
+			$item   = preg_match('/^\s*([-*+]|\d{1,9}[.)])(\s|$)/', $line) === 1;
+			$inList = $item || ($inList && preg_match('/^\s/', $line) === 1);
+			$line   = $inList && preg_match('/^( {4}|\t)/', $line) === 1
+				? $line
+				: ltrim($line, " \t");
 			$line = preg_replace('/^(#{1,6})\s{2,}/', '$1 ', $line) ?? $line;
 			$line = preg_match('/\S  $/', $line) === 1 ? $line : rtrim($line);
 
