@@ -8,9 +8,10 @@
 - 2026-11-07: `link_mcp_server_card`: the MCP Server Card `.well-known/mcp/server-card.json` (`AgentReady::MCP_SERVER_CARD`) as `rel="describedby"` in the `Link` header, only when the file exists
 - 2026-11-24: `mayConvert()` moved to `Negotiation\ConversionPolicy`; the Markdown alternate in the `Link` header now also needs `mayConvert()`, so noindex pages and logged-in users get no alternate they cannot fetch (issue #17)
 - 2026-11-25: shop-page fixes from the Magento port: no indentation outside lists (no accidental code blocks), empty links get their `aria-label`/`title` or go, empty list items go, skip links and labels of removed controls go, link text trimmed (issue #000)
+- 2026-11-27: frontmatter has `url` (canonical, else `og:url`, made absolute) and `lang` (`<html lang>`), port of the Magento module (issue #21)
 
-Last updated: 2026-11-25
-Verified against: 460ba82
+Last updated: 2026-11-27
+Verified against: 26d9f28
 Covers:
 - Src/plugins/system/agentready/
 
@@ -86,7 +87,7 @@ One `Link` header (`setHeader(…, true)`), merged with existing `Link` values b
 ## Extraction
 
 `PageExtractor::extract()` parses with `DOMDocument::loadHTML` (UTF-8 via the `<?xml encoding>` prefix, libxml errors suppressed), then:
-- **meta**: title = `meta[name=title]` → `og:title` → `<title>`; description = `meta[name=description]` → `og:description`; image = `og:image`; whitespace collapsed.
+- **meta**: title = `meta[name=title]` → `og:title` → `<title>`; description = `meta[name=description]` → `og:description`; url = `link[rel=canonical]` → `og:url`, resolved against the base URL; lang = `<html lang>`; image = `og:image`; whitespace collapsed. Frontmatter order: title, description, url, lang, image.
 - **JSON-LD**: every `script[type=application/ld+json]` in the document (case-insensitive type), trimmed.
 - **content**: the first match of the content selectors in list order (not document order); null when none matches.
 - **removeNodes**: comments, the site landmarks (`SITE_LANDMARKS`: `header`/`footer` without an `article`, `aside`, `main`, `nav` or `section` ancestor, and `[role=banner]`/`[role=contentinfo]`, as the HTML spec defines banner and contentinfo), every match of the remove selectors inside the content, and each `label` whose control (its `for` target, or the control it wraps) is removed (`orphanedLabels()`).

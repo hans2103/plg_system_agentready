@@ -64,7 +64,8 @@ final class PageExtractor
 		}
 
 		$xpath  = new DOMXPath($doc);
-		$meta   = self::meta($xpath);
+		$base   = self::baseUrl($xpath, $pageUrl);
+		$meta   = self::meta($xpath, $base);
 		$jsonLd = self::jsonLd($xpath);
 
 		$content = null;
@@ -84,7 +85,7 @@ final class PageExtractor
 
 		self::removeNodes($xpath, $content, $removeSelectors);
 		self::tidy($xpath, $content);
-		self::absolutize($xpath, $content, self::baseUrl($xpath, $pageUrl));
+		self::absolutize($xpath, $content, $base);
 
 		$inner = '';
 
@@ -96,16 +97,18 @@ final class PageExtractor
 	}
 
 	/**
-	 * Title, description and image. The standard meta name wins over Open Graph; the title falls
-	 * back to the <title> element.
+	 * Title, description, URL, language and image. The standard meta name wins over Open Graph;
+	 * the title falls back to the <title> element, the URL (the canonical link, made absolute)
+	 * to og:url, and the language is the lang attribute of <html>.
 	 *
-	 * @param   DOMXPath  $xpath  The document
+	 * @param   DOMXPath  $xpath    The document
+	 * @param   string    $baseUrl  The base URL, for a relative canonical link
 	 *
 	 * @return  array<string, string>
 	 *
 	 * @since   26.45.0
 	 */
-	private static function meta(DOMXPath $xpath): array
+	private static function meta(DOMXPath $xpath, string $baseUrl): array
 	{
 		$first = static function (array $queries) use ($xpath): string {
 			foreach ($queries as $query) {
@@ -126,8 +129,14 @@ final class PageExtractor
 		$meta = [
 			'title'       => $first(["//meta[@name='title']/@content", "//meta[@property='og:title']/@content", '//title']),
 			'description' => $first(["//meta[@name='description']/@content", "//meta[@property='og:description']/@content"]),
+			'url'         => $first(["//link[@rel='canonical']/@href", "//meta[@property='og:url']/@content"]),
+			'lang'        => $first(['/html/@lang']),
 			'image'       => $first(["//meta[@property='og:image']/@content"]),
 		];
+
+		if ($meta['url'] !== '' && $baseUrl !== '') {
+			$meta['url'] = UrlResolver::resolve($baseUrl, $meta['url']);
+		}
 
 		return array_filter($meta, static fn (string $value): bool => $value !== '');
 	}

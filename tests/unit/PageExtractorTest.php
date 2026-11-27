@@ -21,6 +21,8 @@ $page = <<<'HTML'
 <meta name="description" content="  Real
  description ">
 <meta property="og:image" content="https://example.com/i.png">
+<meta property="og:url" content="https://example.com/og">
+<link rel="canonical" href="/en/page">
 <script type="application/ld+json">
  {"@type":"Organization"}
 </script>
@@ -48,6 +50,8 @@ check('result', $result !== null, true);
 check('meta name wins over og, whitespace collapsed', $result?->meta['description'] ?? null, 'Real description');
 check('og:title before <title>', $result?->meta['title'] ?? null, 'OG title');
 check('image', $result?->meta['image'] ?? null, 'https://example.com/i.png');
+check('canonical wins over og:url, made absolute', $result?->meta['url'] ?? null, 'https://example.com/en/page');
+check('meta order', array_keys($result?->meta ?? []), ['title', 'description', 'url', 'lang', 'image']);
 check('json-ld from head and body', $result?->jsonLd, ['{"@type":"Organization"}', '{"@type":"WebPage"}']);
 
 $content = $result?->contentHtml ?? '';
@@ -62,6 +66,13 @@ foreach (['Sub menu', 'Hidden notice', 'icon', 'Close', 'alert(1)', 'WebPage', '
 $noMain = PageExtractor::extract('<html><head><title>T</title></head><body><p>Only body</p></body></html>', 'main, body', REMOVE, 'https://example.com/');
 check('falls back to body', $noMain?->contentHtml, '<p>Only body</p>');
 check('title fallback', $noMain?->meta, ['title' => 'T']);
+
+$absolute = PageExtractor::extract('<html><head><link rel="canonical" href="https://shop.test/p.html"></head><body>B</body></html>', 'body', '', 'https://example.com/p.html?utm=1');
+check('absolute canonical kept', $absolute?->meta, ['url' => 'https://shop.test/p.html']);
+$og = PageExtractor::extract('<html><head><meta property="og:url" content="/og.html"></head><body>B</body></html>', 'body', '', 'https://example.com/x/');
+check('og:url fallback, made absolute', $og?->meta, ['url' => 'https://example.com/og.html']);
+$lang = PageExtractor::extract('<html lang=" nl-NL "><head></head><body>B</body></html>', 'body', '', 'https://example.com/');
+check('lang trimmed, no url without canonical or og:url', $lang?->meta, ['lang' => 'nl-NL']);
 check('no json-ld', $noMain?->jsonLd, []);
 
 $order = PageExtractor::extract('<body><article>A</article><main>M</main></body>', 'main, article', '', 'https://example.com/');

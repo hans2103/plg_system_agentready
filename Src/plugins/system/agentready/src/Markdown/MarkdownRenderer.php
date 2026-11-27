@@ -52,7 +52,7 @@ final class MarkdownRenderer
 		if ($frontmatter && $page->meta !== []) {
 			$lines = ['---'];
 
-			foreach (['title', 'description', 'image'] as $key) {
+			foreach (['title', 'description', 'url', 'lang', 'image'] as $key) {
 				if (isset($page->meta[$key])) {
 					// A JSON string is a valid YAML double-quoted scalar.
 					$lines[] = $key . ': ' . json_encode($page->meta[$key], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);

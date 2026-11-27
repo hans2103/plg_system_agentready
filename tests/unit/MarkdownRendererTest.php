@@ -34,6 +34,8 @@ $plain = MarkdownRenderer::render(new ExtractedPage([], '<p>x</p>', []));
 check('no meta, no json-ld', $plain, "x\n");
 check('frontmatter disabled', str_starts_with(MarkdownRenderer::render($page, false, true), '# Café'), true);
 check('json-ld disabled', str_contains(MarkdownRenderer::render($page, true, false), '```json'), false);
+$full = MarkdownRenderer::render(new ExtractedPage(['image' => 'https://e.test/i.png', 'lang' => 'nl', 'url' => 'https://e.test/p', 'title' => 'T'], '<p>B</p>', []));
+check('frontmatter order title, url, lang, image', str_starts_with($full, "---\ntitle: \"T\"\nurl: \"https://e.test/p\"\nlang: \"nl\"\nimage: \"https://e.test/i.png\"\n---\n\nB\n"), true);
 check('empty content', MarkdownRenderer::render(new ExtractedPage(['title' => 'T'], '', ['{}'])), '');
 check('whitespace-only content', MarkdownRenderer::render(new ExtractedPage(['title' => 'T'], "<div> \n </div>", [])), '');
 
