@@ -230,7 +230,7 @@ final class PageExtractor
 	 *
 	 * @return  list<DOMNode>
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.48.1
 	 */
 	private static function orphanedLabels(DOMXPath $xpath, DOMElement $content, array $remove): array
 	{
@@ -271,7 +271,7 @@ final class PageExtractor
 	 *
 	 * @return  string
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.48.1
 	 */
 	private static function xpathLiteral(string $value): string
 	{
@@ -429,7 +429,7 @@ final class PageExtractor
 	 *
 	 * @return  void
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.48.1
 	 */
 	private static function trimLinkText(DOMXPath $xpath, DOMNode $link): void
 	{
@@ -467,7 +467,7 @@ final class PageExtractor
 	 *
 	 * @return  boolean
 	 *
-	 * @since   __DEPLOY_VERSION__
+	 * @since   26.48.1
 	 */
 	private static function isSkipLink(DOMElement $link): bool
 	{
